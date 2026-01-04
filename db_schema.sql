@@ -27,4 +27,4 @@ CREATE TABLE IF NOT EXISTS ventas (
     FOREIGN KEY (rifa_id) REFERENCES rifas(id) ON DELETE CASCADE
 );
 
-INSERT INTO usuarios (usuario, password) VALUES ('admin', '$2y$10$wOq5jF8.m4X.0/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0');
+INSERT INTO usuarios (usuario, password) VALUES ('admin', '$2y$10$JW7yans7mhPQLfRzQb8hlOlzSLHY0V.GfkRzgCMNx3vfVE21Iq.B6');

@@ -1,12 +1,67 @@
 <aside class="sidebar">
-    <div class="brand">
-        <h3>Rifas Admin</h3>
+    <div class="sidebar-header">
+        <div class="brand-logo">
+            <span class="material-symbols-outlined">confirmation_number</span>
+        </div>
+        <h1 class="brand-name">Rifas Admin</h1>
     </div>
-    <nav class="menu">
-        <a href="index.php"><i class="fas fa-home"></i> Dashboard</a>
-        <a href="rifas.php"><i class="fas fa-ticket-alt"></i> Mis Rifas</a>
-        <a href="crear_rifa.php"><i class="fas fa-plus-circle"></i> Nueva Rifa</a>
-        <a href="ventas.php"><i class="fas fa-money-bill-wave"></i> Ventas</a>
-        <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Salir</a>
+
+    <nav class="sidebar-menu">
+        
+        <div class="menu-group">
+            <ul class="menu-list">
+                <li>
+                    <a href="index.php" class="nav-item <?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>">
+                        <span class="material-symbols-outlined">dashboard</span>
+                        Dashboard
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="menu-group">
+            <h3 class="group-label">Gestión</h3>
+            <ul class="menu-list">
+                <li>
+                    <a href="rifas.php" class="nav-item <?php echo ($pagina_actual == 'rifas.php' || $pagina_actual == 'crear_rifa.php') ? 'active' : ''; ?>">
+                        <span class="material-symbols-outlined">celebration</span>
+                        Rifas
+                    </a>
+                </li>
+                <li>
+                    <a href="ventas.php" class="nav-item <?php echo ($pagina_actual == 'ventas.php') ? 'active' : ''; ?>">
+                        <span class="material-symbols-outlined">receipt_long</span>
+                        Ventas
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="menu-group">
+            <h3 class="group-label">Sistema</h3>
+            <ul class="menu-list">
+                <li>
+                    <a href="configuracion.php" class="nav-item <?php echo ($pagina_actual == 'configuracion.php') ? 'active' : ''; ?>">
+                        <span class="material-symbols-outlined">settings</span>
+                        Configuración
+                    </a>
+                </li>
+            </ul>
+        </div>
     </nav>
+
+    <div class="sidebar-footer">
+        <div class="user-profile">
+            <div class="user-avatar bg-blue">
+                <?php echo strtoupper(substr($_SESSION['usuario_nombre'] ?? 'A', 0, 2)); ?>
+            </div>
+            <div class="user-info">
+                <p class="name"><?php echo $_SESSION['usuario_nombre'] ?? 'Admin'; ?></p>
+                <p class=\"email\">Administrador</p>
+            </div>
+            <a href="logout.php" class="btn-logout" title="Cerrar Sesión">
+                <span class="material-symbols-outlined">logout</span>
+            </a>
+        </div>
+    </div>
 </aside>
