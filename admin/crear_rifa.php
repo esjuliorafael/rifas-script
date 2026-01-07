@@ -7,15 +7,15 @@
             <p>Configura los detalles de tu próximo sorteo.</p>
         </div>
         <div class="header-actions">
-            <button class="btn-text" onclick="navigate('rifas')">Cancelar</button>
-            <button class="btn-primary btn-glow" onclick="saveRaffle()">Guardar Rifa</button>
+            <button type="button" class="btn-text" onclick="window.location.href='rifas.php'">Cancelar</button>
+            <button type="submit" form="raffleForm" class="btn-primary btn-glow">Guardar Rifa</button>
         </div>
     </header>
 
     <div class="create-raffle-layout">
         
         <div class="form-column">
-            <form id="raffleForm" class="main-form">
+            <form id="raffleForm" class="main-form" method="POST" action="actions/guardar_rifa.php" enctype="multipart/form-data">
                 
                 <div class="card form-section">
                     <h3 class="section-title">
@@ -61,7 +61,7 @@
                         <label class="field-label">Distribución de Oportunidades</label>
                         <div class="options-grid small">
                             <label class="option-card-label">
-                                <input type="radio" name="tipo_oportunidad" value="aleatoria" class="hidden-radio">
+                                <input type="radio" name="tipo_oportunidad" value="aleatorio" class="hidden-radio">
                                 <div class="option-card small">
                                     <span class="material-symbols-outlined option-icon-small">shuffle</span>
                                     <div class="option-info">
@@ -92,21 +92,22 @@
                     
                     <div class="form-group">
                         <label class="field-label">Título de la Rifa</label>
-                        <input type="text" class="input-field" placeholder="Ej: Gran Sorteo Navideño 2025">
+                        <input type="text" name="titulo" class="input-field" placeholder="Ej: Gran Sorteo Navideño 2025" required>
                     </div>
 
                     <div class="form-group">
                         <label class="field-label">Descripción</label>
-                        <textarea rows="4" class="input-field textarea" placeholder="Detalles de premios, condiciones y lugar..."></textarea>
+                        <textarea name="descripcion" rows="4" class="input-field textarea" placeholder="Detalles de premios, condiciones y lugar..."></textarea>
                     </div>
 
                     <div class="media-grid">
                         <div class="form-group">
                             <label class="field-label">Foto de Portada</label>
-                            <div class="upload-box">
+                            <div class="upload-box" onclick="document.getElementById('fileInput').click()">
                                 <span class="material-symbols-outlined upload-icon">add_photo_alternate</span>
                                 <p class="upload-text">Subir Portada</p>
                                 <p class="upload-hint">PNG, JPG hasta 5MB</p>
+                                <input type="file" id="fileInput" name="imagen" style="display:none" accept="image/*" onchange="previewImage(this)">
                             </div>
                         </div>
                         <div class="form-group">
@@ -129,11 +130,11 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="field-label">Fecha del Sorteo</label>
-                            <input type="date" class="input-field">
+                            <input type="date" name="fecha_sorteo" class="input-field">
                         </div>
                         <div class="form-group">
                             <label class="field-label">Hora</label>
-                            <input type="time" class="input-field">
+                            <input type="time" name="hora_sorteo" class="input-field">
                         </div>
                     </div>
 
@@ -144,21 +145,21 @@
                             <label class="field-label">Rango Numérico</label>
                             <div class="input-wrapper">
                                 <span class="input-prefix">0 -</span>
-                                <input type="number" class="input-field pl-prefix" placeholder="99" id="rangeInput">
+                                <input type="number" class="input-field pl-prefix" placeholder="99" id="rangeInput" readonly>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="field-label">Total Boletos</label>
                             <div class="input-wrapper">
                                 <span class="material-symbols-outlined input-icon">confirmation_number</span>
-                                <input type="number" class="input-field pl-icon" placeholder="100" id="ticketsInput" oninput="calculateRevenue()">
+                                <input type="number" name="num_boletos" class="input-field pl-icon" placeholder="100" id="ticketsInput" oninput="calculateRevenue(); updateRange();" required>
                             </div>
                         </div>
                         <div class="form-group hidden" id="opp-per-ticket-field">
                             <label class="field-label text-blue">Oportunidades / Boleto</label>
                             <div class="input-wrapper">
                                 <span class="material-symbols-outlined input-icon text-blue">stars</span>
-                                <input type="number" class="input-field pl-icon input-blue" placeholder="5" value="1">
+                                <input type="number" name="oportunidades" class="input-field pl-icon input-blue" placeholder="5" value="1" id="oppInput" oninput="updateRange()">
                             </div>
                         </div>
                     </div>
@@ -167,7 +168,7 @@
                         <label class="field-label">Precio por Boleto</label>
                         <div class="input-wrapper">
                             <span class="input-prefix">$</span>
-                            <input type="number" class="input-field pl-prefix pr-suffix font-large" placeholder="0.00" id="priceInput" oninput="calculateRevenue()">
+                            <input type="number" name="precio_boleto" class="input-field pl-prefix pr-suffix font-large" placeholder="0.00" id="priceInput" oninput="calculateRevenue()" step="0.01" required>
                             <span class="input-suffix">MXN</span>
                         </div>
                     </div>
@@ -221,5 +222,57 @@
 
     </div>
 </section>
+
+<script>
+    function toggleOpportunities(show) {
+        const section = document.getElementById('opportunity-options');
+        const field = document.getElementById('opp-per-ticket-field');
+        const oppInput = document.getElementById('oppInput');
+
+        if (show) {
+            section.classList.remove('hidden');
+            field.classList.remove('hidden');
+        } else {
+            section.classList.add('hidden');
+            field.classList.add('hidden');
+            oppInput.value = 1; 
+            updateRange();
+        }
+    }
+
+    function calculateRevenue() {
+        const tickets = document.getElementById('ticketsInput').value || 0;
+        const price = document.getElementById('priceInput').value || 0;
+        const total = tickets * price;
+
+        document.getElementById('displayTickets').innerText = tickets;
+        document.getElementById('displayPrice').innerText = '$' + parseFloat(price).toFixed(2);
+        document.getElementById('displayTotal').innerText = '$' + total.toLocaleString('en-US', {minimumFractionDigits: 2});
+    }
+
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const text = input.closest('.upload-box').querySelector('.upload-text');
+            text.innerText = "Seleccionado: " + input.files[0].name;
+            text.style.color = 'var(--primary-blue)';
+            text.style.fontWeight = 'bold';
+        }
+    }
+
+    function updateRange() {
+        const boletos = parseInt(document.getElementById('ticketsInput').value) || 0;
+        const opp = parseInt(document.getElementById('oppInput').value) || 1;
+        const totalNumeros = boletos * opp;
+        
+        if(totalNumeros > 0) {
+            const log = Math.log10(totalNumeros);
+            const isPowerOf10 = Number.isInteger(log);
+            
+            let max = isPowerOf10 ? totalNumeros - 1 : totalNumeros;
+            document.getElementById('rangeInput').value = max;
+            document.querySelector('.input-prefix').innerText = isPowerOf10 ? "0 -" : "1 -";
+        }
+    }
+</script>
 
 <?php include 'includes/footer.php'; ?>

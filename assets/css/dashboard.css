@@ -1543,3 +1543,7 @@
     text-decoration: none;
 }
 .help-box a:hover { text-decoration: underline; }
+
+.hidden {
+        display: none !important;
+    }
