@@ -1069,9 +1069,19 @@
 
 /* Botones de Acción en Tarjeta */
 .card-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.card-actions a {
+    flex: 1; /* Los botones normales ocupan espacio */
+    text-align: center;
+    text-decoration: none;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    display: inline-block;
 }
 
 .btn-outline {
@@ -1545,5 +1555,24 @@
 .help-box a:hover { text-decoration: underline; }
 
 .hidden {
-        display: none !important;
-    }
+    display: none !important;
+}
+
+.btn-icon-danger {
+    background-color: #fee2e2; 
+    color: #991b1b; 
+    border: none; 
+    padding: 0.5rem; 
+    border-radius: 0.5rem; 
+    cursor: pointer; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center;
+    transition: background 0.2s;
+    height: 100%; /* Para igualar altura con los enlaces */
+    vertical-align: middle;
+}
+
+.btn-icon-danger:hover {
+    background-color: #fecaca;
+}

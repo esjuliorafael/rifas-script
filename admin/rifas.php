@@ -86,8 +86,19 @@ $rifas = $rifaModel->obtenerTodas();
                         </div>
                         
                         <div class="card-actions">
-                            <a href="editar_rifa.php?id=<?php echo $r['id']; ?>" class="btn-outline" style="text-align:center; text-decoration:none; padding:0.5rem;">Editar</a>
-                            <a href="ventas.php?rifa=<?php echo $r['id']; ?>" class="btn-soft" style="background-color:#eff6ff; color:var(--primary-blue); text-align:center; text-decoration:none; padding:0.5rem; border-radius:0.5rem; font-weight:600;">Ver Lista</a>
+                            <a href="crear_rifa.php?id=<?php echo $r['id']; ?>" class="btn-outline" title="Editar Rifa">
+                                Editar
+                            </a>
+                            
+                            <a href="ventas.php?rifa=<?php echo $r['id']; ?>" class="btn-soft" title="Ver Lista de Ventas">
+                                Ver Lista
+                            </a>
+                            <form action="actions/eliminar_rifa.php" method="POST" style="display:inline;" onsubmit="return confirmarEliminacion(event, '<?php echo htmlspecialchars($r['titulo']); ?>')">
+                                <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
+                                <button type="submit" class="btn-icon-danger" title="Eliminar Rifa">
+                                    <span class="material-symbols-outlined">delete</span>
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </article>
