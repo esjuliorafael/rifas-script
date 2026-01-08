@@ -36,20 +36,48 @@ $rifas = $rifaModel->obtenerTodas();
         </div>
     </header>
 
+    <?php if(isset($_GET['msg'])): ?>
+        <div class="alert-box success">
+            <span class="material-symbols-outlined">check_circle</span>
+            <span>
+                <?php 
+                    if($_GET['msg'] == 'creado') echo "¡La rifa ha sido creada exitosamente!";
+                    if($_GET['msg'] == 'actualizado') echo "¡La rifa ha sido actualizada correctamente!";
+                    if($_GET['msg'] == 'eliminado') echo "¡La rifa ha sido eliminada permanentemente!";
+                ?>
+            </span>
+        </div>
+    <?php endif; ?>
+
+    <?php if(isset($_GET['error'])): ?>
+        <div class="alert-box error">
+            <span class="material-symbols-outlined">error</span>
+            <span>
+                <?php 
+                    if($_GET['error'] == 'tiene_ventas') echo "<strong>No se puede eliminar:</strong> Esta rifa tiene ventas registradas. Cancélala o finalízala para mantener el historial.";
+                    else echo "Ocurrió un error inesperado al procesar la solicitud.";
+                ?>
+            </span>
+        </div>
+    <?php endif; ?>
+
     <div class="rifas-grid">
         <?php if(count($rifas) > 0): ?>
             <?php foreach($rifas as $r): ?>
                 <?php 
-                    // Cálculos (Igual que antes)
+                    // Cálculos
                     $total = intval($r['cantidad_boletos']);
                     $ocupados_array = $boletoModel->obtenerOcupados($r['id']); 
                     $vendidos = count($ocupados_array);
                     $porcentaje = ($total > 0) ? ($vendidos / $total) * 100 : 0;
                     $estado_clase = ($r['estado'] === 'activa') ? 'status-active' : 'status-ended';
+                    // Manejo de imagen
                     $imagen_url = !empty($r['imagen']) ? "../assets/uploads/" . $r['imagen'] : "../assets/img/placeholder.jpg";
                 ?>
 
-                <article class="rifa-card" data-estado="<?php echo $r['estado']; ?>"> <div class="card-media">
+                <article class="rifa-card" data-estado="<?php echo $r['estado']; ?>"> 
+                    
+                    <div class="card-media">
                         <img src="<?php echo $imagen_url; ?>" alt="<?php echo $r['titulo']; ?>" class="media-img">
                         <span class="status-label <?php echo $estado_clase; ?>">
                             <?php echo ucfirst($r['estado']); ?>
@@ -57,7 +85,7 @@ $rifas = $rifaModel->obtenerTodas();
                     </div>
                     
                     <div class="card-body">
-                        <h3 class="rifa-title"><?php echo $r['titulo']; ?></h3>
+                        <h3 class="rifa-title"><?php echo htmlspecialchars($r['titulo']); ?></h3>
                         <div class="rifa-details">
                             <div class="detail-group">
                                 <span class="label">Precio</span>
@@ -86,14 +114,16 @@ $rifas = $rifaModel->obtenerTodas();
                         </div>
                         
                         <div class="card-actions">
-                            <a href="crear_rifa.php?id=<?php echo $r['id']; ?>" class="btn-outline" title="Editar Rifa">
-                                Editar
-                            </a>
-                            
                             <a href="ventas.php?rifa=<?php echo $r['id']; ?>" class="btn-soft" title="Ver Lista de Ventas">
+                                <span class="material-symbols-outlined">visibility</span>
                                 Ver Lista
                             </a>
-                            <form action="actions/eliminar_rifa.php" method="POST" style="display:inline;" onsubmit="return confirmarEliminacion(event, '<?php echo htmlspecialchars($r['titulo']); ?>')">
+
+                            <a href="crear_rifa.php?id=<?php echo $r['id']; ?>" class="btn-outline" title="Editar Rifa">
+                                <span class="material-symbols-outlined">edit</span>
+                                Editar
+                            </a>
+                            <form action="actions/eliminar_rifa.php" method="POST" style="display:inline-flex;" onsubmit="return confirmarEliminacion(event, '<?php echo htmlspecialchars($r['titulo']); ?>')">
                                 <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
                                 <button type="submit" class="btn-icon-danger" title="Eliminar Rifa">
                                     <span class="material-symbols-outlined">delete</span>
@@ -105,15 +135,63 @@ $rifas = $rifaModel->obtenerTodas();
 
             <?php endforeach; ?>
         <?php else: ?>
-            <p>No hay rifas registradas.</p>
+            <div style="grid-column: 1/-1; text-align:center; padding:3rem; color:#6b7280;">
+                <p>No hay rifas registradas.</p>
+            </div>
         <?php endif; ?>
     </div>
 </section>
 
+<style>
+    /* Alertas */
+    .alert-box { padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-size: 0.95rem; }
+    .alert-box.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .alert-box.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+</style>
+
 <script>
-    // Ejecutar filtro inicial al cargar (mostrar solo activas por defecto)
+    // 1. Confirmación de Eliminación
+    function confirmarEliminacion(e, titulo) {
+        if(!confirm(`⚠️ ¿Estás SEGURO de que deseas eliminar la rifa:\n"${titulo}"?\n\nEsta acción borrará la configuración y las oportunidades asociadas.\n(Si tiene ventas, el sistema impedirá el borrado).`)) {
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    }
+
+    // 2. Filtro de Rifas (Activas / Finalizadas)
+    function filterRifas(status) {
+        // Actualizar botones
+        document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+        if(status === 'activa') document.getElementById('btn-active-rifas').classList.add('active');
+        if(status === 'finalizada') document.getElementById('btn-finished-rifas').classList.add('active');
+
+        // Filtrar tarjetas por data-estado
+        const cards = document.querySelectorAll('.rifa-card');
+        cards.forEach(card => {
+            if (card.dataset.estado === status) {
+                card.style.display = 'flex'; // Flex porque article.rifa-card suele ser flex column
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // 3. Inicialización
     document.addEventListener('DOMContentLoaded', () => {
         filterRifas('activa');
+        
+        // Auto-ocultar alertas
+        const alerts = document.querySelectorAll('.alert-box');
+        if(alerts.length > 0) {
+            setTimeout(() => {
+                alerts.forEach(el => {
+                    el.style.transition = "opacity 0.5s ease";
+                    el.style.opacity = "0";
+                    setTimeout(() => el.remove(), 500);
+                });
+            }, 5000);
+        }
     });
 </script>
 

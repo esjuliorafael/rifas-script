@@ -1071,29 +1071,27 @@
 .card-actions {
     display: flex;
     gap: 0.5rem;
-    margin-top: 1rem;
 }
 
 .card-actions a {
-    flex: 1; /* Los botones normales ocupan espacio */
-    text-align: center;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-decoration: none;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    display: inline-block;
 }
 
 .btn-outline {
     background: white;
     border: 2px solid var(--border-light);
-    border-radius: 0.5rem;
+    border-radius: 0.75rem 1rem;
     padding: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 700;
+    font-size: 1em;
+    font-weight: 600;
     color: var(--text-gray);
     cursor: pointer;
     transition: all 0.2s;
+    gap: 0.5rem;
 }
 .btn-outline:hover {
     border-color: #d1d5db;
@@ -1104,12 +1102,13 @@
     background: #dbeafe; /* Azul suave */
     border: none;
     border-radius: 0.5rem;
-    padding: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 700;
+    padding: 0.75rem 1rem;
+    font-size: 1em;
+    font-weight: 600;
     color: var(--primary-blue);
     cursor: pointer;
     transition: background 0.2s;
+    gap: 0.5rem;
 }
 .btn-soft:hover {
     background-color: #bfdbfe;
@@ -1562,15 +1561,13 @@
     background-color: #fee2e2; 
     color: #991b1b; 
     border: none; 
-    padding: 0.5rem; 
+    padding: 0.75rem 1rem; 
     border-radius: 0.5rem; 
     cursor: pointer; 
     display: inline-flex; 
     align-items: center; 
     justify-content: center;
     transition: background 0.2s;
-    height: 100%; /* Para igualar altura con los enlaces */
-    vertical-align: middle;
 }
 
 .btn-icon-danger:hover {
