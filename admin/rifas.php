@@ -36,31 +36,6 @@ $rifas = $rifaModel->obtenerTodas();
         </div>
     </header>
 
-    <?php if(isset($_GET['msg'])): ?>
-        <div class="alert-box success">
-            <span class="material-symbols-outlined">check_circle</span>
-            <span>
-                <?php 
-                    if($_GET['msg'] == 'creado') echo "¡La rifa ha sido creada exitosamente!";
-                    if($_GET['msg'] == 'actualizado') echo "¡La rifa ha sido actualizada correctamente!";
-                    if($_GET['msg'] == 'eliminado') echo "¡La rifa ha sido eliminada permanentemente!";
-                ?>
-            </span>
-        </div>
-    <?php endif; ?>
-
-    <?php if(isset($_GET['error'])): ?>
-        <div class="alert-box error">
-            <span class="material-symbols-outlined">error</span>
-            <span>
-                <?php 
-                    if($_GET['error'] == 'tiene_ventas') echo "<strong>No se puede eliminar:</strong> Esta rifa tiene ventas registradas. Cancélala o finalízala para mantener el historial.";
-                    else echo "Ocurrió un error inesperado al procesar la solicitud.";
-                ?>
-            </span>
-        </div>
-    <?php endif; ?>
-
     <div class="rifas-grid">
         <?php if(count($rifas) > 0): ?>
             <?php foreach($rifas as $r): ?>
@@ -142,21 +117,23 @@ $rifas = $rifaModel->obtenerTodas();
     </div>
 </section>
 
-<style>
-    /* Alertas */
-    .alert-box { padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; font-size: 0.95rem; }
-    .alert-box.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-    .alert-box.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-</style>
-
 <script>
-    // 1. Confirmación de Eliminación
-    function confirmarEliminacion(e, titulo) {
-        if(!confirm(`⚠️ ¿Estás SEGURO de que deseas eliminar la rifa:\n"${titulo}"?\n\nEsta acción borrará la configuración y las oportunidades asociadas.\n(Si tiene ventas, el sistema impedirá el borrado).`)) {
-            e.preventDefault();
-            return false;
+    // Nueva función asíncrona usando TrojesUI
+    async function confirmarEliminacion(e, titulo) {
+        e.preventDefault(); // 1. Detener envío inmediato del formulario
+
+        // 2. Mostrar el modal propio (esperar respuesta)
+        const confirmado = await TrojesUI.confirm({
+            title: '¿Eliminar Rifa?',
+            message: `Vas a eliminar "${titulo}". Esta acción borrará la configuración y oportunidades. Si tiene ventas, no se permitirá.`,
+            confirmText: 'Sí, Eliminar'
+        });
+
+        // 3. Si el usuario dijo que sí...
+        if (confirmado) {
+            // Buscamos el formulario específico que disparó el evento y lo enviamos manualmente
+            e.target.submit();
         }
-        return true;
     }
 
     // 2. Filtro de Rifas (Activas / Finalizadas)
