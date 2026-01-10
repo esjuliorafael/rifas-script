@@ -3,9 +3,10 @@ include 'includes/header.php';
 include_once '../config/database.php';
 include_once '../models/Rifa.php';
 
-// Lógica de carga de datos para Edición
+// Inicialización para Edición
 $is_edit = false;
-$r = null; // Datos de la rifa
+$r = null; 
+$galeria_existente = [];
 
 if (isset($_GET['id'])) {
     $database = new Database();
@@ -15,10 +16,13 @@ if (isset($_GET['id'])) {
     
     if ($rifaModel->obtenerUna()) {
         $is_edit = true;
-        $r = $rifaModel; // Alias corto
-        // Separar fecha y hora
+        $r = $rifaModel;
+        
         $fecha_val = $r->fecha_sorteo ? date('Y-m-d', strtotime($r->fecha_sorteo)) : '';
         $hora_val = $r->fecha_sorteo ? date('H:i', strtotime($r->fecha_sorteo)) : '';
+        
+        // Cargar galería existente
+        $galeria_existente = $rifaModel->obtenerGaleria();
     }
 }
 ?>
@@ -38,7 +42,6 @@ if (isset($_GET['id'])) {
     </header>
 
     <div class="create-raffle-layout">
-        
         <div class="form-column">
             <form id="raffleForm" class="main-form" method="POST" action="actions/guardar_rifa.php" enctype="multipart/form-data">
                 
@@ -147,8 +150,8 @@ if (isset($_GET['id'])) {
                             <label class="field-label">Foto de Portada</label>
                             <div class="upload-box" onclick="document.getElementById('fileInput').click()">
                                 <?php if($is_edit && !empty($r->imagen)): ?>
-                                    <img src="../assets/uploads/<?php echo $r->imagen; ?>" style="max-height: 50px; margin-bottom: 5px;">
-                                    <p class="upload-text" style="color:var(--primary-blue);">Cambiar Imagen</p>
+                                    <img src="../assets/uploads/<?php echo $r->imagen; ?>" style="max-height: 50px; object-fit:contain; margin-bottom: 5px;">
+                                    <p class="upload-text" style="color:var(--primary-blue); font-size:0.8rem;">Click para cambiar</p>
                                 <?php else: ?>
                                     <span class="material-symbols-outlined upload-icon">add_photo_alternate</span>
                                     <p class="upload-text">Subir Portada</p>
@@ -157,13 +160,23 @@ if (isset($_GET['id'])) {
                                 <input type="file" id="fileInput" name="imagen" style="display:none" accept="image/*" onchange="previewImage(this)">
                             </div>
                         </div>
+                        
                         <div class="form-group">
                             <label class="field-label">Galería Adicional</label>
-                            <div class="upload-box white">
-                                <span class="material-symbols-outlined upload-icon">video_library</span>
-                                <p class="upload-text">Fotos o Videos</p>
-                                <p class="upload-hint">Opcional</p>
+                            <div class="upload-box white" onclick="document.getElementById('galleryInput').click()">
+                                <span class="material-symbols-outlined upload-icon">perm_media</span>
+                                <p class="upload-text" id="galleryText">Fotos Adicionales</p>
+                                <p class="upload-hint">Selecciona múltiples archivos</p>
+                                <input type="file" id="galleryInput" name="galeria[]" multiple style="display:none" accept="image/*" onchange="previewGallery(this)">
                             </div>
+                            
+                            <?php if(!empty($galeria_existente)): ?>
+                                <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;">
+                                    <?php foreach($galeria_existente as $img): ?>
+                                        <img src="../assets/uploads/galeria/<?php echo $img['ruta_imagen']; ?>" style="width:40px; height:40px; border-radius:4px; object-fit:cover; border:1px solid #ddd;">
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -269,16 +282,10 @@ if (isset($_GET['id'])) {
                                 <?php echo $is_edit ? '$'.number_format($r->num_boletos * $r->precio_boleto, 2) : '$0.00'; ?>
                             </p>
                         </div>
-
-                        <div class="info-box">
-                            <span class="material-symbols-outlined info-icon">info</span>
-                            <p class="info-text">El cálculo asume la venta del <strong>100%</strong> de los boletos disponibles.</p>
-                        </div>
                     </div>
                 </div>
             </div>
         </div>
-
     </div>
 </section>
 
@@ -318,7 +325,16 @@ if (isset($_GET['id'])) {
     function previewImage(input) {
         if (input.files && input.files[0]) {
             const text = input.closest('.upload-box').querySelector('.upload-text');
-            text.innerText = "Nueva: " + input.files[0].name;
+            text.innerText = "Seleccionado: " + input.files[0].name;
+            text.style.color = 'var(--primary-blue)';
+            text.style.fontWeight = 'bold';
+        }
+    }
+
+    function previewGallery(input) {
+        if (input.files && input.files.length > 0) {
+            const text = document.getElementById('galleryText');
+            text.innerText = input.files.length + " archivos seleccionados";
             text.style.color = 'var(--primary-blue)';
             text.style.fontWeight = 'bold';
         }
@@ -332,20 +348,14 @@ if (isset($_GET['id'])) {
         if(totalNumeros > 0) {
             const log = Math.log10(totalNumeros);
             const isPowerOf10 = Number.isInteger(log);
-            
-            // Lógica simple visual, no afecta backend
             let max = isPowerOf10 ? totalNumeros - 1 : totalNumeros;
-            
             document.getElementById('rangeInput').value = max;
             document.querySelector('.input-prefix').innerText = isPowerOf10 ? "0 -" : "1 -";
         }
     }
     
-    // Ejecutar lógica inicial si estamos editando para mostrar prefijos correctos
     <?php if($is_edit): ?>
         window.addEventListener('DOMContentLoaded', () => {
-             // Pequeño hack para actualizar visualmente el prefijo del rango (0- o 1-)
-             // basado en la lógica de php usa_cero
              const usaCero = <?php echo $r->usa_cero ? 'true' : 'false'; ?>;
              document.querySelector('.input-prefix').innerText = usaCero ? "0 -" : "1 -";
         });

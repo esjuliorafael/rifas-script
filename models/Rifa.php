@@ -2,6 +2,7 @@
 class Rifa {
     private $conn;
     private $table = 'rifas';
+    private $table_galeria = 'rifas_galeria'; // Tabla para la galería
 
     // Propiedades
     public $id;
@@ -24,7 +25,7 @@ class Rifa {
     }
 
     public function crear() {
-        // ... (Lógica de creación existente, se mantiene igual)
+        // Lógica automática de ceros y cifras
         $total_universo = $this->num_boletos * $this->oportunidades;
         $log = log10($total_universo);
         
@@ -66,7 +67,6 @@ class Rifa {
     }
 
     public function actualizar() {
-        // ... (Lógica de actualización existente)
         $query = "UPDATE " . $this->table . " 
                   SET titulo = :titulo, 
                       descripcion = :descripcion, 
@@ -90,51 +90,69 @@ class Rifa {
         if (!empty($this->imagen)) {
             $stmt->bindParam(':imagen', $this->imagen);
         }
+
         return $stmt->execute();
     }
 
-    // --- FUNCIÓN ELIMINAR MEJORADA ---
+    // --- MÉTODOS DE GALERÍA (NUEVOS) ---
+    
+    public function guardarImagenGaleria($nombre_archivo) {
+        $query = "INSERT INTO " . $this->table_galeria . " (rifa_id, ruta_imagen) VALUES (:rifa_id, :ruta)";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':rifa_id', $this->id);
+        $stmt->bindParam(':ruta', $nombre_archivo);
+        return $stmt->execute();
+    }
+
+    public function obtenerGaleria() {
+        $query = "SELECT * FROM " . $this->table_galeria . " WHERE rifa_id = :rifa_id ORDER BY id ASC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':rifa_id', $this->id);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // -----------------------------------
+
     public function eliminar() {
-        // 1. Verificar si tiene ventas asociadas
-        // (Asumimos que la tabla de ventas se llama 'ventas')
+        // 1. Verificar ventas
         $queryCheck = "SELECT COUNT(*) as total FROM ventas WHERE rifa_id = :id";
         $stmtCheck = $this->conn->prepare($queryCheck);
         $stmtCheck->bindParam(':id', $this->id);
         $stmtCheck->execute();
         $row = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
-        if ($row['total'] > 0) {
-            // REGLA DE NEGOCIO: No eliminar si hay ventas
-            return "TIENE_VENTAS"; 
-        }
+        if ($row['total'] > 0) return "TIENE_VENTAS"; 
 
-        // 2. Obtener datos para borrar imagen
         $this->obtenerUna(); 
 
-        // 3. Eliminar imagen física si existe
+        // 2. Eliminar imagen de portada
         if($this->imagen && file_exists(__DIR__ . '/../assets/uploads/' . $this->imagen)) {
             unlink(__DIR__ . '/../assets/uploads/' . $this->imagen);
         }
 
-        // 4. Eliminar registro (La BD eliminará las oportunidades por CASCADE)
+        // 3. Eliminar imágenes de galería (Físicamente)
+        $galeria = $this->obtenerGaleria();
+        foreach($galeria as $foto) {
+            $ruta = __DIR__ . '/../assets/uploads/galeria/' . $foto['ruta_imagen'];
+            if(file_exists($ruta)) {
+                unlink($ruta);
+            }
+        }
+
+        // 4. Eliminar registro (La BD eliminará las filas de galería por CASCADE)
         $query = "DELETE FROM " . $this->table . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $this->id);
-        
-        if($stmt->execute()) {
-            return true;
-        }
-        return false;
+        return $stmt->execute();
     }
-
-    // Métodos auxiliares
+    
     private function sanitize() {
         $this->titulo = htmlspecialchars(strip_tags($this->titulo));
         $this->descripcion = htmlspecialchars(strip_tags($this->descripcion));
     }
 
     private function generarOportunidadesDb() {
-        // ... (Código de generación de oportunidades ya corregido previamente)
         $total_numeros = $this->num_boletos * $this->oportunidades;
         $cifras_fmt = "%0" . $this->cifras . "d"; 
         $boletos_principales = range(1, $this->num_boletos);
@@ -207,6 +225,18 @@ class Rifa {
             return true;
         }
         return false;
+    }
+    
+    public function obtenerOportunidades($rifa_id) {
+        $sql = "SELECT numero_boleto, oportunidades_extra FROM rifas_oportunidades WHERE rifa_id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $rifa_id);
+        $stmt->execute();
+        $resultado = [];
+        while($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $resultado[$row['numero_boleto']] = json_decode($row['oportunidades_extra']);
+        }
+        return $resultado;
     }
 }
 ?>

@@ -1,8 +1,8 @@
 <?php
 class Database {
     private $host = "localhost";
-    private $db_name = "rifas_las_trojes_db"; 
-    private $username = "admin";
+    private $db_name = "granlivo_rifas_las_trojes_db"; 
+    private $username = "granlivo_admin";
     private $password = "j10u22l12i9O16*";
     public $conn;
 
