@@ -2,7 +2,7 @@
 class Rifa {
     private $conn;
     private $table = 'rifas';
-    private $table_galeria = 'rifas_galeria'; // Tabla para la galería
+    private $table_galeria = 'rifas_galeria';
 
     // Propiedades
     public $id;
@@ -94,7 +94,7 @@ class Rifa {
         return $stmt->execute();
     }
 
-    // --- MÉTODOS DE GALERÍA (NUEVOS) ---
+    // --- MÉTODOS DE GALERÍA ---
     
     public function guardarImagenGaleria($nombre_archivo) {
         $query = "INSERT INTO " . $this->table_galeria . " (rifa_id, ruta_imagen) VALUES (:rifa_id, :ruta)";
@@ -202,6 +202,15 @@ class Rifa {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    // --- NUEVO MÉTODO AGREGADO ---
+    public function obtenerActivas() {
+        $query = "SELECT * FROM " . $this->table . " WHERE estado = 'activa' ORDER BY id DESC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    // -----------------------------
 
     public function obtenerUna() {
         $query = "SELECT * FROM " . $this->table . " WHERE id = ? LIMIT 1";

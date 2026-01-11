@@ -82,16 +82,24 @@ class Boleto {
             return ["success" => false, "message" => $e->getMessage()];
         }
     }
-
-    // ... (Mantén tus métodos obtenerVentas, cambiarEstado, eliminar existentes aquí)
+    
     public function obtenerVentas($rifa_id = null) {
-        $query = "SELECT v.*, r.titulo as nombre_rifa, r.precio_boleto 
-                  FROM " . $this->table . " v
-                  LEFT JOIN rifas r ON v.rifa_id = r.id";
-        if($rifa_id) { $query .= " WHERE v.rifa_id = :rifa_id"; }
+        // Agregamos 'r.cifras' al SELECT para poder formatear el número (001, 002...)
+        $query = "SELECT v.*, r.titulo as nombre_rifa, r.precio_boleto, r.cifras 
+                    FROM " . $this->table . " v
+                    LEFT JOIN rifas r ON v.rifa_id = r.id";
+        
+        if($rifa_id) { 
+            $query .= " WHERE v.rifa_id = :rifa_id"; 
+        }
+        
         $query .= " ORDER BY v.fecha DESC";
+        
         $stmt = $this->conn->prepare($query);
-        if($rifa_id) { $stmt->bindParam(':rifa_id', $rifa_id); }
+        if($rifa_id) { 
+            $stmt->bindParam(':rifa_id', $rifa_id); 
+        }
+        
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

@@ -13,14 +13,12 @@ $db = $database->getConnection();
 $boletoModel = new Boleto($db);
 $rifaModel = new Rifa($db);
 
-// 1. Obtener filtros de la URL (si existen)
+// 1. Obtener filtros de la URL
 $filtro_rifa = isset($_GET['rifa']) ? $_GET['rifa'] : '';
 $filtro_estado = isset($_GET['estado']) ? $_GET['estado'] : '';
 $busqueda = isset($_GET['q']) ? $_GET['q'] : '';
 
 // 2. Obtener datos filtrados
-// Nota: Debemos actualizar el método obtenerVentas en Boleto.php para soportar estos filtros nuevos.
-// Por ahora usaremos el método básico y filtraremos lo que podamos o asumiremos que actualizaste el modelo.
 $ventas = $boletoModel->obtenerVentas($filtro_rifa); 
 $lista_rifas = $rifaModel->obtenerActivas();
 ?>
@@ -29,7 +27,7 @@ $lista_rifas = $rifaModel->obtenerActivas();
     <header class="section-header">
         <div class="header-content">
             <h2>Registro de Ventas</h2>
-            <p>Controla el estado de los boletos vendidos.</p>
+            <p>Controla el estado de los boletos vendidos y apartados.</p>
         </div>
         <button class="btn-primary" onclick="window.print()">
             <span class="material-symbols-outlined">print</span>
@@ -41,7 +39,7 @@ $lista_rifas = $rifaModel->obtenerActivas();
         
         <div class="search-group">
             <span class="material-symbols-outlined icon-search">search</span>
-            <input type="text" name="q" value="<?php echo htmlspecialchars($busqueda); ?>" placeholder="Buscar por cliente o teléfono..." class="search-field">
+            <input type="text" name="q" value="<?php echo htmlspecialchars($busqueda); ?>" placeholder="Buscar cliente, teléfono o estado..." class="search-field">
         </div>
         
         <div class="filter-group">
@@ -68,7 +66,7 @@ $lista_rifas = $rifaModel->obtenerActivas();
                 <thead>
                     <tr>
                         <th>Fecha</th>
-                        <th>Participante</th>
+                        <th>Participante / Ubicación</th>
                         <th>Rifa / Boleto</th>
                         <th class="col-center">Estado</th>
                         <th class="col-right">Acciones</th>
@@ -79,10 +77,21 @@ $lista_rifas = $rifaModel->obtenerActivas();
                         <?php foreach($ventas as $venta): ?>
                             
                             <?php 
-                                // Si hay filtro de estado y no coincide, saltamos
+                                // Filtros en PHP
                                 if($filtro_estado && $venta['estado_pago'] != $filtro_estado) continue;
-                                // Si hay búsqueda y no coincide nombre o telefono, saltamos
-                                if($busqueda && stripos($venta['cliente_nombre'], $busqueda) === false && stripos($venta['cliente_telefono'], $busqueda) === false) continue;
+                                
+                                if($busqueda) {
+                                    $match = false;
+                                    if(stripos($venta['cliente_nombre'], $busqueda) !== false) $match = true;
+                                    if(stripos($venta['cliente_telefono'], $busqueda) !== false) $match = true;
+                                    if(stripos($venta['cliente_estado'], $busqueda) !== false) $match = true;
+                                    if(!$match) continue;
+                                }
+
+                                // Formateo
+                                $cifras = isset($venta['cifras']) ? $venta['cifras'] : 3; 
+                                $boleto_visual = str_pad($venta['numero_boleto'], $cifras, "0", STR_PAD_LEFT);
+                                $tel_clean = preg_replace('/[^0-9]/', '', $venta['cliente_telefono']);
                             ?>
 
                             <tr>
@@ -99,9 +108,17 @@ $lista_rifas = $rifaModel->obtenerActivas();
                                             <?php echo strtoupper(substr($venta['cliente_nombre'], 0, 2)); ?>
                                         </div>
                                         <div class="user-details">
-                                            <span class="user-name"><?php echo $venta['cliente_nombre']; ?></span>
+                                            <span class="user-name"><?php echo htmlspecialchars($venta['cliente_nombre']); ?></span>
+                                            
+                                            <?php if(!empty($venta['cliente_estado'])): ?>
+                                                <span class="user-location" style="font-size: 0.75rem; color: #6b7280; display:flex; align-items:center; gap:3px;">
+                                                    <span class="material-symbols-outlined" style="font-size:12px;">location_on</span>
+                                                    <?php echo htmlspecialchars($venta['cliente_estado']); ?>
+                                                </span>
+                                            <?php endif; ?>
+
                                             <span class="user-phone">
-                                                <i class="fab fa-whatsapp"></i> <?php echo $venta['cliente_telefono']; ?>
+                                                <i class="fab fa-whatsapp"></i> <?php echo htmlspecialchars($venta['cliente_telefono']); ?>
                                             </span>
                                         </div>
                                     </div>
@@ -109,8 +126,8 @@ $lista_rifas = $rifaModel->obtenerActivas();
 
                                 <td>
                                     <div class="ticket-info">
-                                        <span class="ticket-rifa"><?php echo $venta['nombre_rifa']; ?></span>
-                                        <span class="ticket-number">#<?php echo str_pad($venta['numero_boleto'], 3, "0", STR_PAD_LEFT); ?></span>
+                                        <span class="ticket-rifa"><?php echo htmlspecialchars($venta['nombre_rifa']); ?></span>
+                                        <span class="ticket-number">#<?php echo $boleto_visual; ?></span>
                                     </div>
                                 </td>
 
@@ -131,7 +148,8 @@ $lista_rifas = $rifaModel->obtenerActivas();
                                 <td class="col-right">
                                     <div class="row-actions">
                                         
-                                        <a href="https://wa.me/52<?php echo preg_replace('/[^0-9]/', '', $venta['cliente_telefono']); ?>" target="_blank" class="action-btn" title="Contactar">
+                                        <a href="https://wa.me/52<?php echo $tel_clean; ?>?text=Hola <?php echo urlencode($venta['cliente_nombre']); ?>, te escribo sobre tu boleto %23<?php echo $boleto_visual; ?> de la rifa..." 
+                                           target="_blank" class="action-btn" title="Enviar WhatsApp">
                                             <span class="material-symbols-outlined">chat</span>
                                         </a>
 
@@ -140,14 +158,14 @@ $lista_rifas = $rifaModel->obtenerActivas();
                                                 <span class="material-symbols-outlined">payments</span>
                                             </a>
                                         <?php else: ?>
-                                            <a href="actions/control_venta.php?accion=pendiente&id=<?php echo $venta['id']; ?>" class="action-btn" title="Marcar Pendiente">
+                                            <a href="actions/control_venta.php?accion=pendiente&id=<?php echo $venta['id']; ?>" class="action-btn" title="Marcar como Pendiente">
                                                 <span class="material-symbols-outlined">undo</span>
                                             </a>
                                         <?php endif; ?>
 
-                                        <a href="actions/control_venta.php?accion=eliminar&id=<?php echo $venta['id']; ?>" 
+                                        <a href="#" 
                                            class="action-btn btn-danger" 
-                                           onclick="return confirm('¿Estás seguro de liberar este boleto?');"
+                                           onclick="confirmarLiberacion(event, 'actions/control_venta.php?accion=eliminar&id=<?php echo $venta['id']; ?>', '<?php echo $boleto_visual; ?>')"
                                            title="Liberar Boleto">
                                             <span class="material-symbols-outlined">delete</span>
                                         </a>
@@ -157,16 +175,34 @@ $lista_rifas = $rifaModel->obtenerActivas();
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="5" style="text-align:center; padding: 2rem;">No hay ventas registradas.</td></tr>
+                        <tr><td colspan="5" style="text-align:center; padding: 3rem; color: #6b7280;">No se encontraron ventas con los filtros actuales.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
 
         <div class="table-footer">
-            <p class="footer-info">Mostrando resultados recientes</p>
-            </div>
+            <p class="footer-info">Mostrando <?php echo count($ventas); ?> registros</p>
+        </div>
     </div>
 </section>
+
+<script>
+    async function confirmarLiberacion(e, url, boleto) {
+        e.preventDefault(); // Detenemos la navegación inmediata
+
+        // Llamamos al modal personalizado
+        const confirmado = await TrojesUI.confirm({
+            title: '¿Liberar Boleto?',
+            message: `Vas a eliminar el boleto #${boleto} y quedará disponible nuevamente para venta. Esta acción no se puede deshacer.`,
+            confirmText: 'Sí, Liberar'
+        });
+
+        // Si el usuario confirma, redirigimos
+        if (confirmado) {
+            window.location.href = url;
+        }
+    }
+</script>
 
 <?php include 'includes/footer.php'; ?>
