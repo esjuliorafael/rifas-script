@@ -369,6 +369,12 @@
     box-shadow: var(--shadow-sm);
 }
 
+@media (max-width: 512px) {
+    .sidebar {
+        display: none;
+    }
+}
+
 /* Header & Brand */
 .sidebar-header {
     padding: 1.5rem;
@@ -1572,4 +1578,173 @@
 
 .btn-icon-danger:hover {
     background-color: #fecaca;
+}
+
+/* =========================================
+   3D MOBILE DRAWER NAVIGATION
+   ========================================= */
+
+/* Ocultar elementos móviles en escritorio */
+.mobile-drawer, .mobile-top-bar {
+    display: none;
+}
+
+/* Solo aplicar en pantallas móviles/tablets */
+@media (max-width: 900px) {
+
+    /* 1. Ocultar Sidebar Desktop Original */
+    #sidebar-wrapper {
+        display: none !important;
+    }
+
+    /* 2. Ajuste del wrapper principal */
+    #page-content-wrapper {
+        width: 100%;
+        padding: 20px;
+        background: #f8f9fc;
+        min-height: 100vh;
+    }
+
+    /* 3. Escenario 3D */
+    .perspective-container {
+        position: relative;
+        width: 100%;
+        height: 100vh;
+        overflow-x: hidden;
+        background-color: #1a1c23; /* Fondo oscuro que se ve en el hueco */
+        perspective: 1500px; /* Profundidad 3D */
+    }
+
+    /* 4. Menú Móvil (El que aparece detrás) */
+    .mobile-drawer {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 75%; /* Ocupa 3/4 de la pantalla */
+        height: 100%;
+        padding-top: 50px;
+        padding-left: 20px;
+        z-index: 1; /* Detrás del contenido */
+        visibility: hidden; /* Oculto inicialmente */
+        transition: visibility 0.4s;
+    }
+
+    .perspective-container.drawer-open .mobile-drawer {
+        visibility: visible;
+    }
+
+    /* Estilos internos del menú móvil */
+    .drawer-header {
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: white;
+    }
+    .drawer-avatar {
+        width: 45px;
+        height: 45px;
+        background: var(--primary-color, #8b5cf6);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
+    }
+    .drawer-user h4 { font-size: 1rem; margin: 0; }
+    .drawer-user span { font-size: 0.8rem; opacity: 0.7; }
+
+    .drawer-menu { list-style: none; padding: 0; margin: 0; }
+    .drawer-menu li { margin-bottom: 0.5rem; }
+    .drawer-menu a {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 15px;
+        color: rgba(255,255,255, 0.6);
+        text-decoration: none;
+        border-radius: 12px;
+        transition: 0.2s;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+    }
+    .drawer-menu a:hover, .drawer-menu a.active {
+        background: rgba(255,255,255, 0.1);
+        color: white;
+        transform: translateX(5px);
+    }
+    .drawer-menu .material-symbols-outlined { font-size: 1.2rem; }
+    .drawer-logout { margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; }
+    .drawer-logout a { color: #f87171 !important; }
+
+    /* 5. Interfaz Principal (La que se transforma) */
+    .main-interface {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: #f8f9fc;
+        z-index: 2;
+        transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 0.4s;
+        transform-origin: center left; /* Punto de pivote para la rotación */
+        overflow-y: auto; /* Scroll interno */
+        box-shadow: 0 0 0 rgba(0,0,0,0);
+    }
+
+    /* ESTADO ABIERTO (La magia 3D) */
+    .perspective-container.drawer-open .main-interface {
+        /* Se mueve a la derecha, se encoge, y rota en Y */
+        transform: scale(0.85) translateX(70%) rotateY(-10deg);
+        border-radius: 30px; /* Bordes redondeados */
+        box-shadow: -20px 20px 50px -10px rgba(0,0,0,0.3); /* Sombra profunda */
+        pointer-events: none; /* Evita clicks accidentales dentro */
+        cursor: pointer; /* Indica que se puede cerrar clickeando */
+    }
+
+    /* Capa blanca extra para efecto de profundidad (Opcional, estilo iOS) */
+    .main-interface::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(255,255,255,0.5);
+        z-index: -1;
+        border-radius: 30px;
+        transform: translate(-10px, 0) scale(0.95);
+        opacity: 0;
+        transition: 0.4s;
+    }
+    .perspective-container.drawer-open .main-interface::before {
+        opacity: 1;
+        transform: translate(-15px, 0) scale(0.95);
+    }
+
+    /* 6. Barra Superior Móvil */
+    .mobile-top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 15px 20px;
+        background: white;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+    .mobile-toggle-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #1e293b;
+        cursor: pointer;
+    }
+    .mobile-brand { font-weight: 700; color: #1e293b; letter-spacing: -0.5px; }
+    .mobile-avatar-mini {
+        width: 32px; height: 32px;
+        background: #e2e8f0; color: #64748b;
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 0.8rem; font-weight: bold;
+    }
 }
