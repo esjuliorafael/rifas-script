@@ -22,8 +22,8 @@ $ventas_totales = count($boletoModel->obtenerVentas());
 
 <section id="view-dashboard" class="view-section active">
     
-    <header class="dashboard-header">
-        <div class="header-titles">
+    <header class="section-header">
+        <div class="header-content">
             <h2>Resumen General</h2>
             <p>Bienvenido, <?php echo $_SESSION['usuario_nombre']; ?>. Aquí está lo que sucede hoy.</p>
         </div>

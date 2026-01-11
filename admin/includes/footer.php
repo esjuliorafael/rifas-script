@@ -13,26 +13,75 @@
             </div>
         </div>
     </div>
-
+    
     <script src="../assets/js/ui.js"></script>
     
     <script>
-        // Lógica del Menú 3D
         document.addEventListener('DOMContentLoaded', () => {
+            // Elementos
             const trigger = document.getElementById('mobileMenuTrigger');
             const container = document.getElementById('perspectiveContainer');
             const mainInterface = document.getElementById('mainInterface');
+            const menuLinks = document.querySelectorAll('.drawer-menu a'); 
 
-            if(trigger && container) {
+            // Variables para el gesto Swipe
+            let touchStartX = 0;
+            let touchEndX = 0;
+            const swipeThreshold = 50; 
+
+            // --- FUNCIONES ---
+            function toggleMenu() {
+                container.classList.toggle('drawer-open');
+            }
+
+            function closeMenu() {
+                container.classList.remove('drawer-open');
+            }
+
+            // --- EVENTOS ---
+
+            if(trigger && container && mainInterface) {
+                
+                // 1. Abrir/Cerrar con Botón Hamburguesa
                 trigger.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    container.classList.toggle('drawer-open');
+                    toggleMenu();
                 });
 
-                mainInterface.addEventListener('click', () => {
+                // (ELIMINADO) 2. Cerrar al tocar el contenido principal (Tap Outside)
+                // Se ha eliminado este bloque para evitar conflictos.
+
+                // 3. Gesto Swipe (Deslizar para cerrar) - SE MANTIENE
+                document.addEventListener('touchstart', (e) => {
+                    touchStartX = e.changedTouches[0].screenX;
+                }, {passive: true});
+
+                document.addEventListener('touchend', (e) => {
+                    touchEndX = e.changedTouches[0].screenX;
+                    handleSwipe();
+                }, {passive: true});
+
+                function handleSwipe() {
                     if(container.classList.contains('drawer-open')) {
-                        container.classList.remove('drawer-open');
+                        // Si desliza de Derecha a Izquierda
+                        if (touchStartX - touchEndX > swipeThreshold) {
+                            closeMenu();
+                        }
                     }
+                }
+
+                // 4. Navegación Suave (Cerrar -> Esperar -> Navegar)
+                menuLinks.forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        if (window.innerWidth <= 900 && container.classList.contains('drawer-open')) {
+                            e.preventDefault(); 
+                            const targetUrl = link.href;
+                            closeMenu(); 
+                            setTimeout(() => {
+                                window.location.href = targetUrl; 
+                            }, 350); 
+                        }
+                    });
                 });
             }
         });

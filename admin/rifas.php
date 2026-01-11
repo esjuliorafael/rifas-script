@@ -50,6 +50,51 @@ $rifas = $rifaModel->obtenerTodas();
                     $imagen_url = !empty($r['imagen']) ? "../assets/uploads/" . $r['imagen'] : "../assets/img/placeholder.jpg";
                 ?>
 
+                <article class="mobile-rifa-card" data-estado="<?php echo $r['estado']; ?>"> 
+                    
+                    <div class="card-body">
+                        <h3 class="rifa-title"><?php echo htmlspecialchars($r['titulo']); ?></h3>
+                        <div class="rifa-details">
+                            <div class="detail-group">
+                                <span class="label">Precio</span>
+                                <span class="value text-blue">$<?php echo number_format($r['precio_boleto'], 2); ?></span>
+                            </div>
+                            <div class="detail-group align-right">
+                                <span class="label">Total</span>
+                                <span class="value"><?php echo $total; ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="progress-info">
+                            <span>Vendidos: <?php echo $vendidos; ?></span>
+                            <span><?php echo number_format($porcentaje, 1); ?>%</span>
+                        </div>
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" style="width: <?php echo $porcentaje; ?>%"></div>
+                        </div>
+                        
+                        <div class="card-actions">
+                            <a href="ventas.php?rifa=<?php echo $r['id']; ?>" class="btn-soft" title="Ver Lista de Ventas">
+                                <span class="material-symbols-outlined">visibility</span>
+                                Ver Lista
+                            </a>
+
+                            <a href="crear_rifa.php?id=<?php echo $r['id']; ?>" class="btn-outline" title="Editar Rifa">
+                                <span class="material-symbols-outlined">edit</span>
+                                Editar
+                            </a>
+                            <form action="actions/eliminar_rifa.php" method="POST" style="display:inline-flex;" onsubmit="return confirmarEliminacion(event, '<?php echo htmlspecialchars($r['titulo']); ?>')">
+                                <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
+                                <button type="submit" class="btn-icon-danger" title="Eliminar Rifa">
+                                    <span class="material-symbols-outlined">delete</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </article>
+
                 <article class="rifa-card" data-estado="<?php echo $r['estado']; ?>"> 
                     
                     <div class="card-media">
