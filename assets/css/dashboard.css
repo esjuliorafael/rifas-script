@@ -923,6 +923,36 @@ body {
     box-shadow: var(--shadow-card);
 }
 
+/* =========================================
+   LÓGICA DUAL: RESPONSIVE + FILTROS
+   ========================================= */
+
+/* 1. BASE (Mobile First) - Menos de 513px */
+.mobile-rifa-card {
+    display: flex; /* O block/grid según tu diseño */
+}
+
+.rifa-card {
+    display: none; /* Ocultamos la de escritorio en móvil */
+}
+
+/* 2. ESCRITORIO - 513px en adelante */
+@media (min-width: 513px) {
+    .mobile-rifa-card {
+        display: none; /* Ocultamos la móvil en escritorio */
+    }
+    
+    .rifa-card {
+        display: flex; /* Mostramos la de escritorio */
+    }
+}
+
+/* 3. FILTRO (Prioridad Absoluta) */
+/* Esta clase la pone/quita JS. Si está presente, el elemento desaparece siempre. */
+.estado-rifa.hidden-by-filter {
+    display: none !important;
+}
+
 /* Sección de Imagen (Media) */
 .card-media {
     height: 200px;

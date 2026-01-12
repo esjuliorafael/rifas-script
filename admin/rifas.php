@@ -50,7 +50,7 @@ $rifas = $rifaModel->obtenerTodas();
                     $imagen_url = !empty($r['imagen']) ? "../assets/uploads/" . $r['imagen'] : "../assets/img/placeholder.jpg";
                 ?>
 
-                <article class="mobile-rifa-card" data-estado="<?php echo $r['estado']; ?>"> 
+                <article class="mobile-rifa-card estado-rifa" data-estado="<?php echo $r['estado']; ?>"> 
                     
                     <div class="card-body">
                         <h3 class="rifa-title"><?php echo htmlspecialchars($r['titulo']); ?></h3>
@@ -95,7 +95,7 @@ $rifas = $rifaModel->obtenerTodas();
                     </div>
                 </article>
 
-                <article class="rifa-card" data-estado="<?php echo $r['estado']; ?>"> 
+                <article class="rifa-card estado-rifa" data-estado="<?php echo $r['estado']; ?>"> 
                     
                     <div class="card-media">
                         <img src="<?php echo $imagen_url; ?>" alt="<?php echo $r['titulo']; ?>" class="media-img">
