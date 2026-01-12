@@ -29,9 +29,9 @@ $rifas = $rifaModel->obtenerTodas();
                 </button>
             </div>
 
-            <a href="crear_rifa.php" class="btn-primary btn-glow">
+            <a href="crear_rifa.php" class="btn-primary btn-glow responsive-btn">
                 <span class="material-symbols-outlined">add</span>
-                Nueva Rifa
+                <span class="action-btn-text">Nueva Rifa</span>
             </a>
         </div>
     </header>
@@ -53,6 +53,9 @@ $rifas = $rifaModel->obtenerTodas();
                 <article class="mobile-rifa-card estado-rifa" data-estado="<?php echo $r['estado']; ?>"> 
                     
                     <div class="card-body">
+                        <span class="mobile-status-label <?php echo $estado_clase; ?>">
+                            <?php echo ucfirst($r['estado']); ?>
+                        </span>
                         <h3 class="rifa-title"><?php echo htmlspecialchars($r['titulo']); ?></h3>
                         <div class="rifa-details">
                             <div class="detail-group">
@@ -78,12 +81,10 @@ $rifas = $rifaModel->obtenerTodas();
                         <div class="card-actions">
                             <a href="ventas.php?rifa=<?php echo $r['id']; ?>" class="btn-soft" title="Ver Lista de Ventas">
                                 <span class="material-symbols-outlined">visibility</span>
-                                Ver Lista
                             </a>
 
                             <a href="crear_rifa.php?id=<?php echo $r['id']; ?>" class="btn-outline" title="Editar Rifa">
                                 <span class="material-symbols-outlined">edit</span>
-                                Editar
                             </a>
                             <form action="actions/eliminar_rifa.php" method="POST" style="display:inline-flex;" onsubmit="return confirmarEliminacion(event, '<?php echo htmlspecialchars($r['titulo']); ?>')">
                                 <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
@@ -181,24 +182,6 @@ $rifas = $rifaModel->obtenerTodas();
         }
     }
 
-    // 2. Filtro de Rifas (Activas / Finalizadas)
-    function filterRifas(status) {
-        // Actualizar botones
-        document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-        if(status === 'activa') document.getElementById('btn-active-rifas').classList.add('active');
-        if(status === 'finalizada') document.getElementById('btn-finished-rifas').classList.add('active');
-
-        // Filtrar tarjetas por data-estado
-        const cards = document.querySelectorAll('.rifa-card');
-        cards.forEach(card => {
-            if (card.dataset.estado === status) {
-                card.style.display = 'flex'; // Flex porque article.rifa-card suele ser flex column
-            } else {
-                card.style.display = 'none';
-            }
-        });
-    }
-
     // 3. Inicialización
     document.addEventListener('DOMContentLoaded', () => {
         filterRifas('activa');
@@ -216,5 +199,7 @@ $rifas = $rifaModel->obtenerTodas();
         }
     });
 </script>
+
+<script src="../assets/js/rifas.js"></script>
 
 <?php include 'includes/footer.php'; ?>
