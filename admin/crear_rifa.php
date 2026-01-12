@@ -161,7 +161,7 @@ if (isset($_GET['id'])) {
                             </div>
                         </div>
                         
-                        <div class="form-group">
+                        <div class="last-form-group">
                             <label class="field-label">Galería Adicional</label>
                             <div class="upload-box white" onclick="document.getElementById('galleryInput').click()">
                                 <span class="material-symbols-outlined upload-icon">perm_media</span>
@@ -181,7 +181,7 @@ if (isset($_GET['id'])) {
                     </div>
                 </div>
 
-                <div class="card form-section">
+                <div class="card last-form-section">
                     <h3 class="section-title">
                         <span class="icon-box bg-green"><span class="material-symbols-outlined">radio_button_unchecked</span></span>
                         Configuración
@@ -193,7 +193,7 @@ if (isset($_GET['id'])) {
                             <input type="date" name="fecha_sorteo" class="input-field" 
                                    value="<?php echo $is_edit ? $fecha_val : ''; ?>">
                         </div>
-                        <div class="form-group">
+                        <div class="last-form-group">
                             <label class="field-label">Hora</label>
                             <input type="time" name="hora_sorteo" class="input-field"
                                    value="<?php echo $is_edit ? $hora_val : ''; ?>">
@@ -202,7 +202,7 @@ if (isset($_GET['id'])) {
 
                     <hr class="divider">
 
-                    <div class="form-row three-cols">
+                    <div class="form-row">
                         <div class="form-group">
                             <label class="field-label">Rango Numérico</label>
                             <div class="input-wrapper <?php echo $is_edit ? 'disabled-input' : ''; ?>">
@@ -222,20 +222,20 @@ if (isset($_GET['id'])) {
                                        <?php echo $is_edit ? 'readonly' : 'required'; ?>>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="form-group <?php echo ($is_edit && $r->oportunidades > 1) ? '' : 'hidden'; ?>" id="opp-per-ticket-field">
-                            <label class="field-label text-blue">Oportunidades / Boleto</label>
-                            <div class="input-wrapper <?php echo $is_edit ? 'disabled-input' : ''; ?>">
-                                <span class="material-symbols-outlined input-icon text-blue">stars</span>
-                                <input type="number" name="oportunidades" class="input-field pl-icon input-blue" placeholder="5" id="oppInput" 
-                                       value="<?php echo $is_edit ? $r->oportunidades : '1'; ?>"
-                                       oninput="updateRange()"
-                                       <?php echo $is_edit ? 'readonly' : ''; ?>>
-                            </div>
+                    <div class="form-group <?php echo ($is_edit && $r->oportunidades > 1) ? '' : 'hidden'; ?>" id="opp-per-ticket-field">
+                        <label class="field-label text-blue">Oportunidades / Boleto</label>
+                        <div class="input-wrapper <?php echo $is_edit ? 'disabled-input' : ''; ?>">
+                            <span class="material-symbols-outlined input-icon text-blue">stars</span>
+                            <input type="number" name="oportunidades" class="input-field pl-icon input-blue" placeholder="5" id="oppInput" 
+                                    value="<?php echo $is_edit ? $r->oportunidades : '1'; ?>"
+                                    oninput="updateRange()"
+                                    <?php echo $is_edit ? 'readonly' : ''; ?>>
                         </div>
                     </div>
 
-                    <div class="form-group">
+                    <div class="last-form-group">
                         <label class="field-label">Precio por Boleto</label>
                         <div class="input-wrapper">
                             <span class="input-prefix">$</span>

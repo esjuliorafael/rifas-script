@@ -70,10 +70,10 @@ body {
     background: var(--card-bg);
     color: #374151;
     border: 1px solid var(--border-light);
-    padding: 0.5rem 1rem;
-    border-radius: 0.75rem;
-    font-weight: 700;
-    font-size: 0.875rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 1em;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -1288,12 +1288,15 @@ body {
 .form-column {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
 }
 
 /* Secciones del Formulario */
 .form-section {
-    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.last-form-section {
+    margin-bottom: 0;
 }
 
 .section-title {
@@ -1326,7 +1329,7 @@ body {
 }
 .options-grid.small { margin-top: 0.5rem; }
 
-@media (max-width: 512) {
+@media (max-width: 512px) {
     .options-grid { grid-template-columns: 1fr; }
 }
 
@@ -1404,8 +1407,13 @@ body {
 .option-desc-small { display: block; font-size: 0.65rem; color: var(--text-gray); }
 
 /* Inputs y Textareas */
-.form-group { margin-bottom: 1rem; }
-.form-group:last-child { margin-bottom: 0; }
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.last-form-group {
+    margin-bottom: 0;
+}
 
 .field-label {
     display: block;
@@ -1451,6 +1459,13 @@ body {
     gap: 1rem;
 }
 
+@media (max-width: 512px) {
+    .media-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+}
+
 .upload-box {
     border: 2px dashed var(--border-light);
     border-radius: 0.75rem;
@@ -1478,7 +1493,13 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
 }
-.form-row.three-cols { grid-template-columns: 1fr 1fr; } /* Por defecto 2 columnas */
+
+@media (max-width: 512px) {
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+}
 
 .divider {
     border: none;
@@ -1797,3 +1818,124 @@ body {
         font-size: 0.8rem; font-weight: bold;
     }
 }
+
+/* =========================
+   WIDGET: ÚLTIMAS VENTAS
+   ========================= */
+
+.widget-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 500px; /* Altura máxima controlada */
+}
+
+.widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.widget-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.btn-link-small {
+    background: none;
+    border: none;
+    color: var(--primary-blue);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-decoration: none;
+}
+.btn-link-small:hover { text-decoration: underline; }
+
+.widget-list {
+    flex: 1;
+    overflow-y: auto; /* Scroll interno si hay muchas ventas */
+    padding-right: 5px; /* Espacio para scrollbar */
+}
+
+/* Scrollbar fina para el widget */
+.widget-list::-webkit-scrollbar { width: 4px; }
+.widget-list::-webkit-scrollbar-thumb { background-color: #e5e7eb; border-radius: 4px; }
+
+.widget-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px dashed var(--border-light);
+}
+.widget-item:last-child { border-bottom: none; }
+
+.item-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.status-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.status-circle span { font-size: 1.2rem; }
+
+.item-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.item-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.item-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-gray);
+    margin: 0;
+}
+
+.item-right {
+    text-align: right;
+}
+
+.item-amount {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.item-status {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+/* Colores de Estado */
+.bg-green { background-color: #dcfce7; color: #16a34a; }
+.bg-yellow { background-color: #fef9c3; color: #ca8a04; }
+.bg-red { background-color: #fee2e2; color: #dc2626; }
+
+.text-green { color: #16a34a; }
+.text-yellow { color: #ca8a04; }
+.text-red { color: #dc2626; }

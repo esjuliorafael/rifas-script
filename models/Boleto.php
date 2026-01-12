@@ -118,5 +118,28 @@ class Boleto {
         $stmt->bindParam(':id', $id);
         return $stmt->execute();
     }
+
+    // Obtiene las últimas ventas agrupadas por transacción (cliente/rifa)
+    public function obtenerUltimasVentasAgrupadas($limite = 8) {
+        $query = "SELECT 
+                    v.cliente_nombre, 
+                    v.cliente_telefono,
+                    v.estado_pago, 
+                    r.titulo as nombre_rifa, 
+                    COUNT(v.id) as cantidad_boletos, 
+                    SUM(r.precio_boleto) as total_venta, 
+                    MAX(v.fecha) as fecha_venta 
+                  FROM " . $this->table . " v 
+                  JOIN rifas r ON v.rifa_id = r.id 
+                  GROUP BY v.cliente_nombre, v.cliente_telefono, v.rifa_id, v.estado_pago 
+                  ORDER BY fecha_venta DESC 
+                  LIMIT :limite";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':limite', $limite, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 ?>

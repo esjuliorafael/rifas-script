@@ -74,12 +74,59 @@ $ventas_totales = count($boletoModel->obtenerVentas());
     </div>
 
     <div class="recent-activity-section" style="margin-top: 2rem;">
-        <div class="card">
-            <div class="card-header">
-                <h3>Últimas Ventas</h3>
+        <?php
+            // Obtener las últimas 8 ventas agrupadas
+            $ultimas_ventas = $boletoModel->obtenerUltimasVentasAgrupadas(8);
+        ?>
+        <div class="card widget-card">
+            
+            <div class="widget-header">
+                <h3 class="widget-title">Últimas Ventas</h3>
+                <a href="ventas.php" class="btn-link-small">VER TODAS</a>
             </div>
-            <div class="card-body">
-                <p style="color: #6b7280; padding: 1rem;">Consulta la sección de <a href="ventas.php">Ventas</a> para ver el detalle.</p>
+
+            <div class="widget-list">
+                <?php if(count($ultimas_ventas) > 0): ?>
+                    <?php foreach($ultimas_ventas as $venta): ?>
+                        <?php 
+                            // Determinar estilos según estado
+                            $es_pagado = ($venta['estado_pago'] === 'pagado');
+                            $bg_class = $es_pagado ? 'bg-green' : 'bg-yellow';
+                            $text_class = $es_pagado ? 'text-green' : 'text-yellow';
+                            $icon = $es_pagado ? 'payments' : 'pending';
+                            $estado_label = ucfirst($venta['estado_pago']);
+                            
+                            // Formato de texto para boletos
+                            $txt_boletos = $venta['cantidad_boletos'] . ' Boleto' . ($venta['cantidad_boletos'] > 1 ? 's' : '');
+                        ?>
+                        <div class="widget-item">
+                            <div class="item-left">
+                                <div class="status-circle <?php echo $bg_class; ?>">
+                                    <span class="material-symbols-outlined"><?php echo $icon; ?></span>
+                                </div>
+                                <div class="item-details">
+                                    <p class="item-title"><?php echo htmlspecialchars($venta['cliente_nombre']); ?></p>
+                                    <p class="item-subtitle">
+                                        <?php echo $txt_boletos; ?> • <?php echo htmlspecialchars($venta['nombre_rifa']); ?>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="item-right">
+                                <p class="item-amount">
+                                    <?php echo $es_pagado ? '+' : ''; ?>$<?php echo number_format($venta['total_venta'], 2); ?>
+                                </p>
+                                <p class="item-status <?php echo $text_class; ?>">
+                                    <?php echo $estado_label; ?>
+                                </p>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="text-align:center; padding: 2rem; color: #9ca3af;">
+                        <span class="material-symbols-outlined" style="font-size: 2rem; opacity:0.5;">receipt_long</span>
+                        <p style="font-size: 0.9rem; margin-top:0.5rem;">No hay ventas recientes</p>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
