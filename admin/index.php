@@ -89,14 +89,14 @@ $ventas_totales = count($boletoModel->obtenerVentas());
                 <?php if(count($ultimas_ventas) > 0): ?>
                     <?php foreach($ultimas_ventas as $venta): ?>
                         <?php 
-                            // Determinar estilos según estado
+                            // Estilos de estado (igual que antes)
                             $es_pagado = ($venta['estado_pago'] === 'pagado');
                             $bg_class = $es_pagado ? 'bg-green' : 'bg-yellow';
                             $text_class = $es_pagado ? 'text-green' : 'text-yellow';
                             $icon = $es_pagado ? 'payments' : 'pending';
                             $estado_label = ucfirst($venta['estado_pago']);
                             
-                            // Formato de texto para boletos
+                            // Texto de boletos
                             $txt_boletos = $venta['cantidad_boletos'] . ' Boleto' . ($venta['cantidad_boletos'] > 1 ? 's' : '');
                         ?>
                         <div class="widget-item">
@@ -104,13 +104,19 @@ $ventas_totales = count($boletoModel->obtenerVentas());
                                 <div class="status-circle <?php echo $bg_class; ?>">
                                     <span class="material-symbols-outlined"><?php echo $icon; ?></span>
                                 </div>
+                                
                                 <div class="item-details">
                                     <p class="item-title"><?php echo htmlspecialchars($venta['cliente_nombre']); ?></p>
-                                    <p class="item-subtitle">
-                                        <?php echo $txt_boletos; ?> • <?php echo htmlspecialchars($venta['nombre_rifa']); ?>
+                                    
+                                    <p class="item-rifa"><?php echo htmlspecialchars($venta['nombre_rifa']); ?></p>
+                                    
+                                    <p class="item-meta">
+                                        <span class="material-symbols-outlined icon-tiny">confirmation_number</span>
+                                        <?php echo $txt_boletos; ?>
                                     </p>
                                 </div>
                             </div>
+
                             <div class="item-right">
                                 <p class="item-amount">
                                     <?php echo $es_pagado ? '+' : ''; ?>$<?php echo number_format($venta['total_venta'], 2); ?>
