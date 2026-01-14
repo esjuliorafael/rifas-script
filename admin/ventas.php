@@ -9,21 +9,44 @@ include 'includes/header.php';
 
 $database = new Database();
 $db = $database->getConnection();
-
 $boletoModel = new Boleto($db);
-$rifaModel = new Rifa($db);
 
-// 1. Obtener filtros de la URL
-$filtro_rifa = isset($_GET['rifa']) ? $_GET['rifa'] : '';
-$filtro_estado = isset($_GET['estado']) ? $_GET['estado'] : '';
+// 1. CONFIGURACIÓN DE PAGINACIÓN Y FILTROS
+$pagina_actual = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$limite_por_pagina = 20;
+$offset = ($pagina_actual - 1) * $limite_por_pagina;
+
 $busqueda = isset($_GET['q']) ? $_GET['q'] : '';
+$estado_filtro = isset($_GET['estado']) ? $_GET['estado'] : 'todos';
 
-// 2. Obtener datos filtrados
-$ventas = $boletoModel->obtenerVentas($filtro_rifa); 
-$lista_rifas = $rifaModel->obtenerActivas();
+// Array de filtros para pasar al modelo
+$filtros = [
+    'busqueda' => $busqueda,
+    'estado' => $estado_filtro
+];
+
+// 2. CONSULTAS A BASE DE DATOS
+// Obtener total de registros (para saber cuántas páginas hay)
+$total_registros = $boletoModel->contarVentas($filtros);
+$total_paginas = ceil($total_registros / $limite_por_pagina);
+
+// Obtener registros de la página actual
+$ventas = $boletoModel->obtenerVentas($filtros, $limite_por_pagina, $offset);
+
+// --- HELPER PARA MANTENER URLS ---
+// Esta función nos ayuda a generar enlaces manteniendo los filtros actuales
+function urlParams($nuevos_params = []) {
+    $params = array_merge($_GET, $nuevos_params);
+    // Si cambiamos de filtro (ej. estado), es mejor resetear a pagina 1
+    if(isset($nuevos_params['estado']) || isset($nuevos_params['q'])) {
+        $params['page'] = 1;
+    }
+    return '?' . http_build_query($params);
+}
 ?>
 
 <section id="view-ventas" class="view-section active">
+    
     <header class="section-header">
         <div class="header-content">
             <h2>Registro de Ventas</h2>
@@ -35,170 +58,208 @@ $lista_rifas = $rifaModel->obtenerActivas();
         </button>
     </header>
 
-    <form method="GET" action="ventas.php" class="sales-filters">
+    <div class="sales-toolbar">
         
-        <div class="search-group">
+        <form method="GET" action="ventas.php" class="search-box">
             <span class="material-symbols-outlined icon-search">search</span>
-            <input type="text" name="q" value="<?php echo htmlspecialchars($busqueda); ?>" placeholder="Buscar cliente, teléfono o estado..." class="search-field">
+            <input type="text" name="q" value="<?php echo htmlspecialchars($busqueda); ?>" 
+                   placeholder="Buscar cliente, teléfono, ubicación o nombre de rifa..." 
+                   class="search-input">
+            <?php if($estado_filtro !== 'todos'): ?>
+                <input type="hidden" name="estado" value="<?php echo htmlspecialchars($estado_filtro); ?>">
+            <?php endif; ?>
+        </form>
+
+        <div class="controls-wrapper">
+            <div class="toggle-group">
+                <a href="<?php echo urlParams(['estado' => 'todos']); ?>" 
+                   class="toggle-btn <?php echo ($estado_filtro == 'todos') ? 'active' : ''; ?>">
+                   Todas
+                </a>
+                <a href="<?php echo urlParams(['estado' => 'pagado']); ?>" 
+                   class="toggle-btn <?php echo ($estado_filtro == 'pagado') ? 'active' : ''; ?>">
+                   Pagadas
+                </a>
+                <a href="<?php echo urlParams(['estado' => 'pendiente']); ?>" 
+                   class="toggle-btn <?php echo ($estado_filtro == 'pendiente') ? 'active' : ''; ?>">
+                   Pendientes
+                </a>
+            </div>
         </div>
+
+    </div>
+
+    <div class="sales-list-view" id="sales-container">
         
-        <div class="filter-group">
-            <select name="rifa" class="filter-select" onchange="this.form.submit()">
-                <option value="">Todas las Rifas</option>
-                <?php foreach($lista_rifas as $r): ?>
-                    <option value="<?php echo $r['id']; ?>" <?php echo ($filtro_rifa == $r['id']) ? 'selected' : ''; ?>>
-                        <?php echo $r['titulo']; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-
-            <select name="estado" class="filter-select" onchange="this.form.submit()">
-                <option value="">Todos los Estados</option>
-                <option value="pagado" <?php echo ($filtro_estado == 'pagado') ? 'selected' : ''; ?>>Pagado</option>
-                <option value="pendiente" <?php echo ($filtro_estado == 'pendiente') ? 'selected' : ''; ?>>Pendiente</option>
-            </select>
+        <div class="sales-header-row">
+            <div class="col-header col-date">Fecha / Hora</div>
+            <div class="col-header col-client">Cliente</div>
+            <div class="col-header col-product">Rifa / Boleto</div>
+            <div class="col-header col-status">Estado / Total</div>
+            <div class="col-header col-actions text-right">Acciones</div>
         </div>
-    </form>
 
-    <div class="card table-card">
-        <div class="table-scroll">
-            <table class="sales-table">
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Participante / Ubicación</th>
-                        <th>Rifa / Boleto</th>
-                        <th class="col-center">Estado</th>
-                        <th class="col-right">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if(count($ventas) > 0): ?>
-                        <?php foreach($ventas as $venta): ?>
-                            
-                            <?php 
-                                // Filtros en PHP
-                                if($filtro_estado && $venta['estado_pago'] != $filtro_estado) continue;
-                                
-                                if($busqueda) {
-                                    $match = false;
-                                    if(stripos($venta['cliente_nombre'], $busqueda) !== false) $match = true;
-                                    if(stripos($venta['cliente_telefono'], $busqueda) !== false) $match = true;
-                                    if(stripos($venta['cliente_estado'], $busqueda) !== false) $match = true;
-                                    if(!$match) continue;
-                                }
+        <div class="sales-list-body">
+            <?php if(count($ventas) > 0): ?>
+                <?php foreach($ventas as $venta): ?>
+                    
+                    <?php 
+                        // Datos y Formatos
+                        $cifras = isset($venta['cifras']) ? $venta['cifras'] : 3;
+                        $boleto_visual = str_pad($venta['numero_boleto'], $cifras, "0", STR_PAD_LEFT);
+                        $tel_clean = preg_replace('/[^0-9]/', '', $venta['cliente_telefono']);
+                        $precio = number_format($venta['precio_boleto'], 2);
+                        
+                        $fechaObj = new DateTime($venta['fecha']);
+                        $fecha_dia = $fechaObj->format('d M');
+                        $fecha_hora = $fechaObj->format('h:i A');
+                        $es_hoy = ($fechaObj->format('Y-m-d') === date('Y-m-d')) ? 'Hoy' : $fecha_dia;
 
-                                // Formateo
-                                $cifras = isset($venta['cifras']) ? $venta['cifras'] : 3; 
-                                $boleto_visual = str_pad($venta['numero_boleto'], $cifras, "0", STR_PAD_LEFT);
-                                $tel_clean = preg_replace('/[^0-9]/', '', $venta['cliente_telefono']);
-                            ?>
+                        $es_pagado = ($venta['estado_pago'] === 'pagado');
+                        $status_class = $es_pagado ? 'text-green' : 'text-orange';
+                        $badge_class = $es_pagado ? 'badge-paid' : 'badge-pending';
+                        $icon_status = $es_pagado ? 'check_circle' : 'schedule';
+                        $txt_status = ucfirst($venta['estado_pago']);
+                    ?>
 
-                            <tr>
-                                <td>
-                                    <div class="date-info">
-                                        <span class="date-main"><?php echo date('d M, Y', strtotime($venta['fecha'])); ?></span>
-                                        <span class="date-sub"><?php echo date('H:i', strtotime($venta['fecha'])); ?></span>
-                                    </div>
-                                </td>
+                    <article class="sale-card">
+                        <div class="sale-col col-date">
+                            <div class="date-wrapper">
+                                <span class="date-label"><?php echo $es_hoy; ?></span>
+                                <span class="time-label"><?php echo $fecha_hora; ?></span>
+                            </div>
+                            <span class="mobile-badge <?php echo $badge_class; ?>"><?php echo $txt_status; ?></span>
+                        </div>
 
-                                <td>
-                                    <div class="user-info">
-                                        <div class="avatar bg-blue">
-                                            <?php echo strtoupper(substr($venta['cliente_nombre'], 0, 2)); ?>
-                                        </div>
-                                        <div class="user-details">
-                                            <span class="user-name"><?php echo htmlspecialchars($venta['cliente_nombre']); ?></span>
-                                            
-                                            <?php if(!empty($venta['cliente_estado'])): ?>
-                                                <span class="user-location" style="font-size: 0.75rem; color: #6b7280; display:flex; align-items:center; gap:3px;">
-                                                    <span class="material-symbols-outlined" style="font-size:12px;">location_on</span>
-                                                    <?php echo htmlspecialchars($venta['cliente_estado']); ?>
-                                                </span>
-                                            <?php endif; ?>
-
-                                            <span class="user-phone">
-                                                <i class="fab fa-whatsapp"></i> <?php echo htmlspecialchars($venta['cliente_telefono']); ?>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <div class="ticket-info">
-                                        <span class="ticket-rifa"><?php echo htmlspecialchars($venta['nombre_rifa']); ?></span>
-                                        <span class="ticket-number">#<?php echo $boleto_visual; ?></span>
-                                    </div>
-                                </td>
-
-                                <td class="col-center">
-                                    <?php if($venta['estado_pago'] == 'pagado'): ?>
-                                        <span class="status-badge status-paid">
-                                            <span class="material-symbols-outlined badge-icon">check_circle</span>
-                                            Pagado
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="status-badge status-pending">
-                                            <span class="material-symbols-outlined badge-icon">schedule</span>
-                                            Pendiente
-                                        </span>
+                        <div class="sale-col col-client">
+                            <div class="client-avatar bg-blue">
+                                <?php echo strtoupper(substr($venta['cliente_nombre'], 0, 1)); ?>
+                            </div>
+                            <div class="client-info">
+                                <h4 class="client-name"><?php echo htmlspecialchars($venta['cliente_nombre']); ?></h4>
+                                <p class="client-phone">
+                                    <?php if(!empty($venta['cliente_estado'])): ?>
+                                        <span style="margin-right:5px; font-weight:600; color:#4b5563;">
+                                            <?php echo htmlspecialchars($venta['cliente_estado']); ?> •
+                                        </span> 
                                     <?php endif; ?>
-                                </td>
+                                    <?php echo htmlspecialchars($venta['cliente_telefono']); ?>
+                                </p>
+                            </div>
+                        </div>
 
-                                <td class="col-right">
-                                    <div class="row-actions">
-                                        
-                                        <a href="https://wa.me/52<?php echo $tel_clean; ?>?text=Hola <?php echo urlencode($venta['cliente_nombre']); ?>, te escribo sobre tu boleto %23<?php echo $boleto_visual; ?> de la rifa..." 
-                                           target="_blank" class="action-btn" title="Enviar WhatsApp">
-                                            <span class="material-symbols-outlined">chat</span>
-                                        </a>
+                        <div class="sale-col col-product">
+                            <p class="product-label"><?php echo htmlspecialchars($venta['nombre_rifa']); ?></p>
+                            <div class="ticket-tags-group">
+                                <span class="ticket-tag">#<?php echo $boleto_visual; ?></span>
+                            </div>
+                        </div>
 
-                                        <?php if($venta['estado_pago'] != 'pagado'): ?>
-                                            <a href="actions/control_venta.php?accion=pagar&id=<?php echo $venta['id']; ?>" class="action-btn btn-success" title="Confirmar Pago">
-                                                <span class="material-symbols-outlined">payments</span>
-                                            </a>
-                                        <?php else: ?>
-                                            <a href="actions/control_venta.php?accion=pendiente&id=<?php echo $venta['id']; ?>" class="action-btn" title="Marcar como Pendiente">
-                                                <span class="material-symbols-outlined">undo</span>
-                                            </a>
-                                        <?php endif; ?>
+                        <div class="sale-col col-status desktop-only">
+                            <p class="price-text">$<?php echo $precio; ?></p>
+                            <div class="status-indicator <?php echo $status_class; ?>">
+                                <span class="material-symbols-outlined icon-tiny"><?php echo $icon_status; ?></span>
+                                <span><?php echo $txt_status; ?></span>
+                            </div>
+                        </div>
 
-                                        <a href="#" 
-                                           class="action-btn btn-danger" 
-                                           onclick="confirmarLiberacion(event, 'actions/control_venta.php?accion=eliminar&id=<?php echo $venta['id']; ?>', '<?php echo $boleto_visual; ?>')"
-                                           title="Liberar Boleto">
-                                            <span class="material-symbols-outlined">delete</span>
-                                        </a>
+                        <div class="sale-col mobile-price-row mobile-only">
+                            <span class="price-text big">$<?php echo $precio; ?></span>
+                        </div>
 
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr><td colspan="5" style="text-align:center; padding: 3rem; color: #6b7280;">No se encontraron ventas con los filtros actuales.</td></tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                        <div class="sale-col col-actions">
+                            <a href="https://wa.me/52<?php echo $tel_clean; ?>?text=Hola <?php echo urlencode($venta['cliente_nombre']); ?>, te escribo por tu boleto %23<?php echo $boleto_visual; ?>..." 
+                               target="_blank" class="action-btn btn-whatsapp" title="Contactar">
+                                <span class="material-symbols-outlined">chat</span>
+                            </a>
+                            
+                            <?php if(!$es_pagado): ?>
+                                <a href="actions/control_venta.php?accion=pagar&id=<?php echo $venta['id']; ?>" class="action-btn btn-blue" title="Marcar Pagado">
+                                    <span class="material-symbols-outlined">check</span>
+                                </a>
+                            <?php else: ?>
+                                <a href="actions/control_venta.php?accion=pendiente&id=<?php echo $venta['id']; ?>" class="action-btn btn-orange" title="Marcar Pendiente">
+                                    <span class="material-symbols-outlined">undo</span>
+                                </a>
+                            <?php endif; ?>
+
+                            <button onclick="confirmarLiberacion(event, 'actions/control_venta.php?accion=eliminar&id=<?php echo $venta['id']; ?>', '<?php echo $boleto_visual; ?>')" 
+                                    class="action-btn btn-delete" title="Eliminar">
+                                <span class="material-symbols-outlined">delete</span>
+                            </button>
+                        </div>
+                    </article>
+
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div style="text-align:center; padding: 4rem; color: #9ca3af;">
+                    <span class="material-symbols-outlined" style="font-size: 3rem; opacity:0.3;">search_off</span>
+                    <p style="margin-top:1rem; font-size:1.1rem;">No se encontraron ventas.</p>
+                </div>
+            <?php endif; ?>
         </div>
 
-        <div class="table-footer">
-            <p class="footer-info">Mostrando <?php echo count($ventas); ?> registros</p>
-        </div>
+        <?php 
+            // CÁLCULO DE ÍNDICES DE RESULTADOS
+            // Si hay registros, calculamos el rango. Si no, todo es 0.
+            $inicio_registro = ($total_registros > 0) ? $offset + 1 : 0;
+            $fin_registro = min($offset + $limite_por_pagina, $total_registros);
+        ?>
+
+        <?php if($total_registros > 0): ?>
+            <div class="pagination-wrapper">
+                
+                <div class="pagination-info">
+                    Mostrando <span class="fw-bold"><?php echo $inicio_registro; ?></span> a <span class="fw-bold"><?php echo $fin_registro; ?></span> de <span class="fw-bold"><?php echo $total_registros; ?></span> resultados
+                </div>
+
+                <?php if($total_paginas > 1): ?>
+                    <div class="pagination-controls">
+                        
+                        <a href="<?php echo ($pagina_actual > 1) ? urlParams(['page' => $pagina_actual - 1]) : '#'; ?>" 
+                            class="page-btn <?php echo ($pagina_actual <= 1) ? 'disabled' : ''; ?>">
+                            <span class="material-symbols-outlined">chevron_left</span>
+                        </a>
+
+                        <?php 
+                        $rango = 2;
+                        $inicio_pag = max(1, $pagina_actual - $rango);
+                        $fin_pag = min($total_paginas, $pagina_actual + $rango);
+                        
+                        if($inicio_pag > 1) echo '<span class="dots">...</span>';
+
+                        for ($i = $inicio_pag; $i <= $fin_pag; $i++): ?>
+                            <a href="<?php echo urlParams(['page' => $i]); ?>" 
+                                class="page-btn <?php echo ($pagina_actual == $i) ? 'active' : ''; ?>">
+                                <?php echo $i; ?>
+                            </a>
+                        <?php endfor; ?>
+
+                        <?php if($fin_pag < $total_paginas) echo '<span class="dots">...</span>'; ?>
+
+                        <a href="<?php echo ($pagina_actual < $total_paginas) ? urlParams(['page' => $pagina_actual + 1]) : '#'; ?>" 
+                            class="page-btn <?php echo ($pagina_actual >= $total_paginas) ? 'disabled' : ''; ?>">
+                            <span class="material-symbols-outlined">chevron_right</span>
+                        </a>
+
+                    </div>
+                <?php endif; ?>
+
+            </div>
+        <?php endif; ?>
+
     </div>
 </section>
 
 <script>
     async function confirmarLiberacion(e, url, boleto) {
-        e.preventDefault(); // Detenemos la navegación inmediata
-
-        // Llamamos al modal personalizado
+        e.preventDefault();
         const confirmado = await TrojesUI.confirm({
             title: '¿Liberar Boleto?',
-            message: `Vas a eliminar el boleto #${boleto} y quedará disponible nuevamente para venta. Esta acción no se puede deshacer.`,
-            confirmText: 'Sí, Liberar'
+            message: `Vas a eliminar el boleto #${boleto}. Quedará disponible para venta nuevamente.`,
+            confirmText: 'Sí, Liberar',
+            confirmColor: '#dc2626'
         });
-
-        // Si el usuario confirma, redirigimos
         if (confirmado) {
             window.location.href = url;
         }
