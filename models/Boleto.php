@@ -59,17 +59,29 @@ class Boleto {
         }
     }
 
-    // --- NUEVO: OBTENER VENTAS CON PAGINACIÓN Y FILTROS ---
+    // --- OBTENER VENTAS AGRUPADAS (Para listado de tarjetas) ---
     public function obtenerVentas($filtros = [], $limit = 20, $offset = 0) {
-        // Construcción base de la consulta
-        $query = "SELECT v.*, r.titulo as nombre_rifa, r.precio_boleto, r.cifras 
-                  FROM " . $this->table . " v
-                  LEFT JOIN rifas r ON v.rifa_id = r.id
-                  WHERE 1=1"; // Truco para concatenar ANDs fácilmente
+        $query = "SELECT 
+                    GROUP_CONCAT(v.id SEPARATOR ',') as ids_venta,
+                    GROUP_CONCAT(v.numero_boleto ORDER BY v.numero_boleto ASC SEPARATOR ',') as boletos_agrupados,
+                    COUNT(v.id) as cantidad_boletos,
+                    SUM(r.precio_boleto) as total_venta,
+                    MAX(v.fecha) as fecha_reciente,
+                    v.cliente_nombre, 
+                    v.cliente_telefono, 
+                    v.cliente_estado, 
+                    v.estado_pago,
+                    r.titulo as nombre_rifa, 
+                    r.precio_boleto, 
+                    r.cifras,
+                    r.estado as estado_rifa  /* <--- CAMPO NUEVO AGREGADO */
+                    FROM " . $this->table . " v
+                    LEFT JOIN rifas r ON v.rifa_id = r.id
+                    WHERE 1=1";
 
         $params = [];
 
-        // 1. Filtro de Búsqueda (Nombre, Tel, Estado, Rifa)
+        // Filtros (Igual que antes)
         if (!empty($filtros['busqueda'])) {
             $query .= " AND (v.cliente_nombre LIKE :q 
                         OR v.cliente_telefono LIKE :q 
@@ -78,23 +90,23 @@ class Boleto {
             $params[':q'] = "%" . $filtros['busqueda'] . "%";
         }
 
-        // 2. Filtro de Estado de Pago (pagado/pendiente)
         if (!empty($filtros['estado']) && $filtros['estado'] !== 'todos') {
             $query .= " AND v.estado_pago = :estado";
             $params[':estado'] = $filtros['estado'];
         }
 
-        // Orden y Paginación
-        $query .= " ORDER BY v.fecha DESC LIMIT :limit OFFSET :offset";
+        // AGRUPAMIENTO CLAVE: Por Rifa, Cliente (Teléfono) y Estado
+        $query .= " GROUP BY v.rifa_id, v.cliente_telefono, v.cliente_nombre, v.estado_pago";
+
+        // Ordenar por la fecha más reciente del grupo
+        $query .= " ORDER BY fecha_reciente DESC LIMIT :limit OFFSET :offset";
 
         $stmt = $this->conn->prepare($query);
 
-        // Bindear parámetros dinámicos
         foreach ($params as $key => $val) {
             $stmt->bindValue($key, $val);
         }
         
-        // Bindear límite y offset (deben ser enteros)
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
 
@@ -102,12 +114,14 @@ class Boleto {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // --- NUEVO: CONTAR TOTAL PARA PAGINACIÓN ---
+    // --- CONTAR GRUPOS (Para paginación correcta) ---
     public function contarVentas($filtros = []) {
-        $query = "SELECT COUNT(*) as total 
-                  FROM " . $this->table . " v
-                  LEFT JOIN rifas r ON v.rifa_id = r.id
-                  WHERE 1=1";
+        // Contamos sobre una subconsulta para respetar el GROUP BY
+        $query = "SELECT COUNT(*) as total FROM (
+                    SELECT v.id 
+                    FROM " . $this->table . " v
+                    LEFT JOIN rifas r ON v.rifa_id = r.id
+                    WHERE 1=1";
 
         $params = [];
 
@@ -123,6 +137,10 @@ class Boleto {
             $query .= " AND v.estado_pago = :estado";
             $params[':estado'] = $filtros['estado'];
         }
+
+        // Mismo agrupamiento
+        $query .= " GROUP BY v.rifa_id, v.cliente_telefono, v.cliente_nombre, v.estado_pago
+                  ) as grupos";
 
         $stmt = $this->conn->prepare($query);
         foreach ($params as $key => $val) {
