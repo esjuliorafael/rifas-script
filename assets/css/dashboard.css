@@ -530,122 +530,293 @@ body {
 }
 
 /* =========================
-   VISTA CONFIGURACIÓN
+   VISTA: CONFIGURACIÓN DEL SISTEMA
    ========================= */
 
-/* Contenedor centrado para formularios o configuraciones */
-.settings-container {
-    max-width: 800px;
-    margin: 0 auto;
+/* Layout Principal (Sidebar + Contenido) */
+.config-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 2rem;
+    align-items: start;
 }
 
-/* Tarjeta de Perfil */
-.profile-card {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 2rem;
+@media (max-width: 1024px) {
+    .config-layout {
+        grid-template-columns: 1fr; /* Colapsar en una columna */
+        gap: 1.5rem;
+    }
 }
 
-.avatar.large {
-    width: 5rem;  /* 80px */
-    height: 5rem;
-    font-size: 1.5rem;
+/* --- SIDEBAR DE NAVEGACIÓN --- */
+.config-sidebar {
+    position: sticky;
+    top: 1rem;
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+    padding: 0.5rem;
+    overflow: hidden;
 }
 
-.profile-details {
+.config-nav {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
 
-.profile-name {
-    font-size: 1.25rem;
-    font-weight: 800;
+.nav-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border: none;
+    background: transparent;
+    border-radius: 0.75rem;
+    color: var(--text-gray);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.nav-tab:hover {
+    background-color: #f9fafb;
     color: var(--text-dark);
 }
 
-.profile-email {
-    font-size: 0.875rem;
-    color: var(--text-gray);
-}
-
-/* Botón de texto simple (link style) */
-.btn-text {
-    background: none;
-    border: none;
-    padding: 0;
+.nav-tab.active {
+    background-color: #eff6ff; /* Azul muy suave */
     color: var(--primary-blue);
     font-weight: 700;
-    font-size: 0.875rem;
-    cursor: pointer;
-    text-align: left;
-    margin-top: 0.25rem;
-}
-.btn-text:hover { text-decoration: underline; }
-
-/* Lista de Ajustes */
-.settings-list {
-    display: flex;
-    flex-direction: column;
 }
 
-.settings-item {
+.nav-tab .icon-tab { font-size: 1.25rem; }
+
+/* Ajuste Móvil para el menú */
+@media (max-width: 1024px) {
+    .config-sidebar {
+        position: static;
+        padding: 0.5rem;
+        overflow-x: auto; /* Scroll horizontal */
+    }
+    .config-nav {
+        flex-direction: row;
+        width: max-content;
+    }
+    .nav-tab { white-space: nowrap; }
+}
+
+/* --- PANELES DE CONTENIDO --- */
+.config-content { min-height: 400px; }
+
+.config-panel {
+    display: none; /* Ocultos por defecto */
+    animation: fadeIn 0.3s ease;
+}
+
+.config-panel.active { display: block; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tarjetas de Panel */
+.panel-card {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid var(--border-light);
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.panel-header {
     display: flex;
-    align-items: center;
     gap: 1rem;
-    padding: 1.5rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    border-bottom: 1px solid var(--border-light);
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px dashed var(--border-light);
 }
 
-.settings-item:last-child {
-    border-bottom: none;
-}
-
-.settings-item:hover {
-    background-color: #f9fafb;
-}
-
-/* Iconos de los items */
-.item-icon-wrapper {
+.header-icon {
     width: 48px;
     height: 48px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: white;
+    font-size: 1.5rem;
     flex-shrink: 0;
 }
-.item-icon-wrapper.bg-purple { background-color: #f3e8ff; color: var(--purple); }
-.item-icon-wrapper.bg-green { background-color: #dcfce7; color: var(--success); }
-.item-icon-wrapper.bg-orange { background-color: #ffedd5; color: var(--warning); }
 
-.item-content {
-    flex: 1;
+/* Colores de Iconos */
+.bg-blue { background: var(--primary-blue); }
+.bg-indigo { background: #6366f1; }
+.bg-green { background: #10b981; }
+.bg-orange { background: #f59e0b; }
+.bg-red { background: #ef4444; }
+.bg-purple { background: #8b5cf6; }
+
+.header-text h3 { margin: 0; font-size: 1.125rem; font-weight: 800; color: var(--text-dark); }
+.header-text p { margin: 0.25rem 0 0 0; font-size: 0.875rem; color: var(--text-gray); }
+
+/* --- FORMULARIOS Y CAMPOS --- */
+.form-grid {
+    display: grid;
+    gap: 1.5rem;
 }
 
-.item-title {
-    font-size: 1rem;
+.field-group { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.field-label {
+    font-size: 0.85rem;
     font-weight: 700;
     color: var(--text-dark);
-    margin-bottom: 0.15rem;
 }
 
-.item-subtitle {
-    font-size: 0.75rem;
+.input-wrapper { position: relative; display: flex; align-items: center; }
+
+.input-field {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-light);
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    transition: all 0.2s;
+    background: #f9fafb;
+}
+
+.input-field:focus {
+    background: white;
+    border-color: var(--primary-blue);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.input-field.pl-icon { padding-left: 2.5rem; }
+.input-icon {
+    position: absolute;
+    left: 0.75rem;
     color: var(--text-gray);
+    font-size: 1.2rem;
+    pointer-events: none;
 }
 
-.icon-arrow {
-    color: #d1d5db; /* Gris claro */
-    transition: color 0.2s;
+/* Toggles (Switches) */
+.toggle-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-light);
 }
 
-.settings-item:hover .icon-arrow {
-    color: var(--text-gray); /* Gris más oscuro al hover */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
 }
+
+.switch input { opacity: 0; width: 0; height: 0; }
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider { background-color: var(--primary-blue); }
+input:checked + .slider:before { transform: translateX(22px); }
+
+/* --- LISTA DE USUARIOS (Cards, NO Tablas) --- */
+.user-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 0.75rem;
+    transition: all 0.2s;
+}
+
+.user-item:hover {
+    border-color: #bfdbfe;
+    box-shadow: var(--shadow-sm);
+}
+
+.user-info { display: flex; align-items: center; gap: 1rem; }
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    background: #e0e7ff;
+    color: var(--primary-blue);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.user-details h4 { margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--text-dark); }
+.user-details span { font-size: 0.75rem; color: var(--text-gray); display: block; }
+.role-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f3f4f6;
+    color: #4b5563;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+/* Botones de Acción */
+.btn-icon-soft {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-gray);
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-icon-soft:hover { background: #fee2e2; color: #dc2626; }
+.btn-icon-soft.edit:hover { background: #eff6ff; color: var(--primary-blue); }
+
+.mt-large { margin-top: 2rem; }
+.form-actions { display: flex; justify-content: flex-end; }
 
 /* =========================
    VISTA: LISTADO DE VENTAS (MODERNO & RESPONSIVE)
