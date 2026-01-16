@@ -2421,3 +2421,72 @@ input:checked + .slider:before { transform: translateX(22px); }
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* =========================
+   UTILIDADES DE CONFIGURACIÓN (Refactorización)
+   ========================= */
+
+/* Textos de ayuda (debajo de inputs) */
+.field-hint {
+    font-size: 0.8rem;
+    color: var(--text-gray);
+    margin-top: 0.5rem;
+    font-weight: 500;
+}
+
+/* Información dentro de los Toggles */
+.toggle-info h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.toggle-info span {
+    font-size: 0.8rem;
+    color: var(--text-gray);
+    display: block;
+}
+
+/* Sub-paneles destacados (ej: Agregar Usuario) */
+.sub-panel {
+    background: #f9fafb;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 1px dashed var(--border-light);
+    margin-bottom: 2rem;
+}
+
+.sub-panel-title {
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+/* Grid para formularios en línea (Nombre | Email | Rol | Botón) */
+.form-inline-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+/* Botón con altura forzada para alinearse con inputs */
+.btn-tall {
+    height: 46px; /* Coincide con la altura estándar de inputs + padding */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1.5rem;
+}
+
+/* Responsive para el formulario inline */
+@media (max-width: 768px) {
+    .form-inline-grid {
+        grid-template-columns: 1fr; /* Colapsar a una columna en móvil */
+        align-items: stretch;
+    }
+}

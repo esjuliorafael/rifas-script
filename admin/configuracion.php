@@ -7,24 +7,23 @@ $database = new Database();
 $db = $database->getConnection();
 $usuarioModel = new Usuario($db);
 
-// 1. Obtener Lista de Usuarios (para el panel de gestión)
+// 1. Obtener Lista de Usuarios
 $usuarios = $usuarioModel->obtenerUsuarios();
 
 // 2. Obtener Datos Reales del Usuario Logueado
 $id_actual = $_SESSION['usuario_id'];
 $datos_usuario = $usuarioModel->obtenerPorId($id_actual);
 
-// Validamos que existan datos (por si acaso), si no, usamos valores por defecto
-$notificaciones_activas = $datos_usuario['recibir_avisos'] ?? 0;
-$email_real_usuario = $datos_usuario['email'] ?? 'admin@sistema.com';
-
-// 3. Configuración para la vista
+// 3. Configuración para la vista (Validación inline para seguridad)
 $config = [
     'banco' => 'BBVA Bancomer',
     'beneficiario' => 'Julio Rafael',
     'cuenta' => '1234 5678 9012 3456',
-    'notificaciones_activas' => (bool)$notificaciones_activas,
-    'email_aviso' => $email_real_usuario, // <--- AHORA SÍ USA EL CORREO REAL DE LA BD
+    
+    // Validamos existencia de datos
+    'notificaciones_activas' => $datos_usuario ? (bool)$datos_usuario['recibir_avisos'] : false,
+    'email_aviso' => $datos_usuario ? $datos_usuario['email'] : '',
+    
     'tiempo_limite' => 48,
     'sistema_apartado' => true,
     'whatsapp' => '52 222 123 4567'
@@ -48,27 +47,22 @@ $config = [
                     <span class="material-symbols-outlined icon-tab">account_balance</span>
                     Métodos de Pago
                 </button>
-                
                 <button onclick="switchTab('hold', this)" class="nav-tab">
                     <span class="material-symbols-outlined icon-tab">timer</span>
                     Tiempo de Apartado
                 </button>
-
                 <button onclick="switchTab('whatsapp', this)" class="nav-tab">
                     <span class="material-symbols-outlined icon-tab">chat</span>
                     WhatsApp
                 </button>
-                
                 <button onclick="switchTab('notifications', this)" class="nav-tab">
                     <span class="material-symbols-outlined icon-tab">notifications</span>
                     Notificaciones
                 </button>
-                
                 <button onclick="switchTab('users', this)" class="nav-tab">
                     <span class="material-symbols-outlined icon-tab">group</span>
                     Usuarios
                 </button>
-                
                 <button onclick="switchTab('security', this)" class="nav-tab">
                     <span class="material-symbols-outlined icon-tab">lock</span>
                     Seguridad
@@ -93,21 +87,19 @@ $config = [
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="pago">
                         
-                        <div class="form-row">
-                            <div class="field-group">
-                                <label class="field-label">Nombre del Banco</label>
-                                <div class="input-wrapper">
-                                    <span class="material-symbols-outlined input-icon">account_balance</span>
-                                    <input type="text" name="banco" class="input-field pl-icon" value="<?php echo $config['banco']; ?>" placeholder="Ej. BBVA">
-                                </div>
+                        <div class="field-group">
+                            <label class="field-label">Nombre del Banco</label>
+                            <div class="input-wrapper">
+                                <span class="material-symbols-outlined input-icon">account_balance</span>
+                                <input type="text" name="banco" class="input-field pl-icon" value="<?php echo $config['banco']; ?>" placeholder="Ej. BBVA">
                             </div>
+                        </div>
 
-                            <div class="field-group">
-                                <label class="field-label">Nombre del Beneficiario</label>
-                                <div class="input-wrapper">
-                                    <span class="material-symbols-outlined input-icon">person</span>
-                                    <input type="text" name="beneficiario" class="input-field pl-icon" value="<?php echo $config['beneficiario']; ?>">
-                                </div>
+                        <div class="field-group">
+                            <label class="field-label">Nombre del Beneficiario</label>
+                            <div class="input-wrapper">
+                                <span class="material-symbols-outlined input-icon">person</span>
+                                <input type="text" name="beneficiario" class="input-field pl-icon" value="<?php echo $config['beneficiario']; ?>">
                             </div>
                         </div>
 
@@ -142,9 +134,9 @@ $config = [
                         <input type="hidden" name="tipo" value="apartado">
 
                         <div class="toggle-wrapper">
-                            <div>
-                                <h4 style="margin:0; font-size:0.95rem;">Sistema de Apartado</h4>
-                                <span style="font-size:0.8rem; color:var(--text-gray);">Liberar boletos impagos automáticamente</span>
+                            <div class="toggle-info">
+                                <h4>Sistema de Apartado</h4>
+                                <span>Liberar boletos impagos automáticamente</span>
                             </div>
                             <label class="switch">
                                 <input type="checkbox" name="apartado_active" <?php echo $config['sistema_apartado'] ? 'checked' : ''; ?>>
@@ -193,7 +185,7 @@ $config = [
                                 <span class="material-symbols-outlined input-icon">call</span>
                                 <input type="tel" name="whatsapp" class="input-field pl-icon" value="<?php echo $config['whatsapp']; ?>" placeholder="Ej. 52 123 456 7890">
                             </div>
-                            <p style="font-size:0.8rem; color:var(--text-gray); margin-top:0.5rem;">
+                            <p class="field-hint">
                                 Este número aparecerá en el pie de página de los boletos digitales.
                             </p>
                         </div>
@@ -221,9 +213,9 @@ $config = [
                         <input type="hidden" name="tipo" value="notificaciones">
 
                         <div class="toggle-wrapper">
-                            <div>
-                                <h4 style="margin:0; font-size:0.95rem;">Activar Notificaciones</h4>
-                                <span style="font-size:0.8rem; color:var(--text-gray);">Enviar correos automáticos</span>
+                            <div class="toggle-info">
+                                <h4>Activar Notificaciones</h4>
+                                <span>Enviar correos automáticos</span>
                             </div>
                             <label class="switch">
                                 <input type="checkbox" name="notif_active" <?php echo $config['notificaciones_activas'] ? 'checked' : ''; ?>>
@@ -237,7 +229,7 @@ $config = [
                                 <span class="material-symbols-outlined input-icon">mail</span>
                                 <input type="email" name="email_aviso" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['email_aviso']); ?>" readonly title="Para cambiar este correo, edita el usuario en la sección Usuarios">
                             </div>
-                            <p style="font-size:0.8rem; color:var(--text-gray); margin-top:0.5rem;">
+                            <p class="field-hint">
                                 Este es el correo asociado a tu cuenta de usuario.
                             </p>
                         </div>
@@ -261,9 +253,10 @@ $config = [
                         </div>
                     </div>
 
-                    <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.75rem; border: 1px dashed var(--border-light); margin-bottom: 2rem;">
-                        <h4 style="margin-top:0; margin-bottom:1rem; font-size:0.9rem;">Agregar Nuevo Usuario</h4>
-                        <form action="actions/crear_usuario.php" method="POST" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end;">
+                    <div class="sub-panel">
+                        <h4 class="sub-panel-title">Agregar Nuevo Usuario</h4>
+                        
+                        <form action="actions/crear_usuario.php" method="POST" class="form-inline-grid">
                             <div class="field-group">
                                 <label class="field-label">Nombre</label>
                                 <input type="text" name="new_name" class="input-field" placeholder="Nombre completo" required>
@@ -279,7 +272,7 @@ $config = [
                                     <option value="staff">Staff</option>
                                 </select>
                             </div>
-                            <button type="submit" class="btn-primary" style="height: 46px;">
+                            <button type="submit" class="btn-primary btn-tall">
                                 <span class="material-symbols-outlined">add</span>
                             </button>
                         </form>
@@ -302,7 +295,7 @@ $config = [
                                 </div>
                                 <div class="user-actions">
                                     <button class="btn-icon-soft edit" title="Editar"><span class="material-symbols-outlined">edit</span></button>
-                                    <?php if($u['id'] !== 1): // Evitar borrar al super admin ?>
+                                    <?php if($u['id'] !== 1): ?>
                                         <button class="btn-icon-soft" title="Eliminar" onclick="confirmDeleteUser(<?php echo $u['id']; ?>)">
                                             <span class="material-symbols-outlined">delete</span>
                                         </button>
@@ -327,7 +320,6 @@ $config = [
                     </div>
 
                     <form action="actions/cambiar_password.php" method="POST" class="form-grid">
-                        
                         <div class="field-group">
                             <label class="field-label">Contraseña Actual</label>
                             <div class="input-wrapper">
@@ -336,21 +328,19 @@ $config = [
                             </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="field-group">
-                                <label class="field-label">Nueva Contraseña</label>
-                                <div class="input-wrapper">
-                                    <span class="material-symbols-outlined input-icon">lock</span>
-                                    <input type="password" name="new_pass" class="input-field pl-icon" required>
-                                </div>
+                        <div class="field-group">
+                            <label class="field-label">Nueva Contraseña</label>
+                            <div class="input-wrapper">
+                                <span class="material-symbols-outlined input-icon">lock</span>
+                                <input type="password" name="new_pass" class="input-field pl-icon" required>
                             </div>
+                        </div>
 
-                            <div class="field-group">
-                                <label class="field-label">Confirmar Nueva Contraseña</label>
-                                <div class="input-wrapper">
-                                    <span class="material-symbols-outlined input-icon">lock_clock</span>
-                                    <input type="password" name="confirm_pass" class="input-field pl-icon" required>
-                                </div>
+                        <div class="field-group">
+                            <label class="field-label">Confirmar Nueva Contraseña</label>
+                            <div class="input-wrapper">
+                                <span class="material-symbols-outlined input-icon">lock_clock</span>
+                                <input type="password" name="confirm_pass" class="input-field pl-icon" required>
                             </div>
                         </div>
 
@@ -367,27 +357,20 @@ $config = [
 
 <script>
     function switchTab(panelId, btnElement) {
-        // 1. Ocultar todos los paneles
         document.querySelectorAll('.config-panel').forEach(panel => {
             panel.classList.remove('active');
         });
-
-        // 2. Desactivar todos los botones
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.classList.remove('active');
         });
-
-        // 3. Mostrar panel y activar botón
         document.getElementById('panel-' + panelId).classList.add('active');
         btnElement.classList.add('active');
         
-        // UX: Scroll suave hacia arriba en móvil
         if(window.innerWidth < 1024) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }
 
-    // Confirmación de borrado
     async function confirmDeleteUser(userId) {
         const confirmed = await TrojesUI.confirm({
             title: '¿Eliminar Usuario?',
