@@ -14,15 +14,16 @@ $usuarios = $usuarioModel->obtenerUsuarios();
 $id_actual = $_SESSION['usuario_id'];
 $datos_usuario = $usuarioModel->obtenerPorId($id_actual);
 
-// 3. Configuración para la vista (Validación inline para seguridad)
+// 3. Configuración para la vista (Datos Reales)
+// Usamos validación segura para evitar errores si el usuario no tiene datos completos
 $config = [
-    'banco' => 'BBVA Bancomer',
+    'banco' => 'BBVA Bancomer', // Placeholder o futuro DB
     'beneficiario' => 'Julio Rafael',
     'cuenta' => '1234 5678 9012 3456',
     
-    // Validamos existencia de datos
-    'notificaciones_activas' => $datos_usuario ? (bool)$datos_usuario['recibir_avisos'] : false,
-    'email_aviso' => $datos_usuario ? $datos_usuario['email'] : '',
+    // Lógica cerrada: Refleja la preferencia real de la BD
+    'notificaciones_activas' => ($datos_usuario && $datos_usuario['recibir_avisos'] == 1),
+    'email_aviso' => $datos_usuario['email'] ?? '', 
     
     'tiempo_limite' => 48,
     'sistema_apartado' => true,
@@ -83,10 +84,8 @@ $config = [
                             <p>Datos visibles para que los participantes realicen sus pagos.</p>
                         </div>
                     </div>
-
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="pago">
-                        
                         <div class="field-group">
                             <label class="field-label">Nombre del Banco</label>
                             <div class="input-wrapper">
@@ -94,7 +93,6 @@ $config = [
                                 <input type="text" name="banco" class="input-field pl-icon" value="<?php echo $config['banco']; ?>" placeholder="Ej. BBVA">
                             </div>
                         </div>
-
                         <div class="field-group">
                             <label class="field-label">Nombre del Beneficiario</label>
                             <div class="input-wrapper">
@@ -102,7 +100,6 @@ $config = [
                                 <input type="text" name="beneficiario" class="input-field pl-icon" value="<?php echo $config['beneficiario']; ?>">
                             </div>
                         </div>
-
                         <div class="field-group">
                             <label class="field-label">CLABE o Tarjeta</label>
                             <div class="input-wrapper">
@@ -110,7 +107,6 @@ $config = [
                                 <input type="text" name="cuenta" class="input-field pl-icon" value="<?php echo $config['cuenta']; ?>">
                             </div>
                         </div>
-
                         <div class="form-actions mt-large">
                             <button type="submit" class="btn-primary">Guardar Cambios</button>
                         </div>
@@ -129,10 +125,8 @@ $config = [
                             <p>Configura cuánto tiempo dura una reserva antes de liberarse.</p>
                         </div>
                     </div>
-
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="apartado">
-
                         <div class="toggle-wrapper">
                             <div class="toggle-info">
                                 <h4>Sistema de Apartado</h4>
@@ -143,7 +137,6 @@ $config = [
                                 <span class="slider"></span>
                             </label>
                         </div>
-
                         <div class="field-group">
                             <label class="field-label">Tiempo Límite (Horas)</label>
                             <div class="input-wrapper">
@@ -156,7 +149,6 @@ $config = [
                                 </select>
                             </div>
                         </div>
-
                         <div class="form-actions mt-large">
                             <button type="submit" class="btn-primary">Actualizar Reglas</button>
                         </div>
@@ -175,21 +167,16 @@ $config = [
                             <p>Número principal para dudas y envío de comprobantes.</p>
                         </div>
                     </div>
-
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="whatsapp">
-                        
                         <div class="field-group">
                             <label class="field-label">Número de WhatsApp</label>
                             <div class="input-wrapper">
                                 <span class="material-symbols-outlined input-icon">call</span>
                                 <input type="tel" name="whatsapp" class="input-field pl-icon" value="<?php echo $config['whatsapp']; ?>" placeholder="Ej. 52 123 456 7890">
                             </div>
-                            <p class="field-hint">
-                                Este número aparecerá en el pie de página de los boletos digitales.
-                            </p>
+                            <p class="field-hint">Este número aparecerá en el pie de página de los boletos digitales.</p>
                         </div>
-
                         <div class="form-actions mt-large">
                             <button type="submit" class="btn-primary">Actualizar Número</button>
                         </div>
@@ -208,10 +195,8 @@ $config = [
                             <p>Recibe un aviso cada vez que se aparte un boleto.</p>
                         </div>
                     </div>
-
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="notificaciones">
-
                         <div class="toggle-wrapper">
                             <div class="toggle-info">
                                 <h4>Activar Notificaciones</h4>
@@ -222,18 +207,14 @@ $config = [
                                 <span class="slider"></span>
                             </label>
                         </div>
-
                         <div class="field-group">
                             <label class="field-label">Correo Destino</label>
                             <div class="input-wrapper">
                                 <span class="material-symbols-outlined input-icon">mail</span>
                                 <input type="email" name="email_aviso" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['email_aviso']); ?>" readonly title="Para cambiar este correo, edita el usuario en la sección Usuarios">
                             </div>
-                            <p class="field-hint">
-                                Este es el correo asociado a tu cuenta de usuario.
-                            </p>
+                            <p class="field-hint">Este es el correo asociado a tu cuenta de usuario.</p>
                         </div>
-
                         <div class="form-actions mt-large">
                             <button type="submit" class="btn-primary">Guardar Preferencias</button>
                         </div>
@@ -252,10 +233,9 @@ $config = [
                             <p>Administra quién puede entrar al panel de control.</p>
                         </div>
                     </div>
-
+                    
                     <div class="sub-panel">
                         <h4 class="sub-panel-title">Agregar Nuevo Usuario</h4>
-                        
                         <form action="actions/crear_usuario.php" method="POST" class="form-inline-grid">
                             <div class="field-group">
                                 <label class="field-label">Nombre</label>
@@ -272,9 +252,7 @@ $config = [
                                     <option value="staff">Staff</option>
                                 </select>
                             </div>
-                            <button type="submit" class="btn-primary btn-tall">
-                                <span class="material-symbols-outlined">add</span>
-                            </button>
+                            <button type="submit" class="btn-primary btn-tall"><span class="material-symbols-outlined">add</span></button>
                         </form>
                     </div>
 
@@ -288,14 +266,14 @@ $config = [
                                     <div class="user-details">
                                         <h4>
                                             <?php echo htmlspecialchars($u['nombre']); ?>
-                                            <span class="role-badge"><?php echo $u['rol']; ?></span>
+                                            <span class="role-badge"><?php echo ucfirst($u['rol']); ?></span>
                                         </h4>
                                         <span><?php echo htmlspecialchars($u['email']); ?></span>
                                     </div>
                                 </div>
                                 <div class="user-actions">
                                     <button class="btn-icon-soft edit" title="Editar"><span class="material-symbols-outlined">edit</span></button>
-                                    <?php if($u['id'] !== 1): ?>
+                                    <?php if($u['id'] !== 1 && $u['id'] != $id_actual): ?>
                                         <button class="btn-icon-soft" title="Eliminar" onclick="confirmDeleteUser(<?php echo $u['id']; ?>)">
                                             <span class="material-symbols-outlined">delete</span>
                                         </button>
@@ -318,7 +296,6 @@ $config = [
                             <p>Actualiza tu clave de acceso actual.</p>
                         </div>
                     </div>
-
                     <form action="actions/cambiar_password.php" method="POST" class="form-grid">
                         <div class="field-group">
                             <label class="field-label">Contraseña Actual</label>
@@ -327,7 +304,6 @@ $config = [
                                 <input type="password" name="current_pass" class="input-field pl-icon" required>
                             </div>
                         </div>
-
                         <div class="field-group">
                             <label class="field-label">Nueva Contraseña</label>
                             <div class="input-wrapper">
@@ -335,7 +311,6 @@ $config = [
                                 <input type="password" name="new_pass" class="input-field pl-icon" required>
                             </div>
                         </div>
-
                         <div class="field-group">
                             <label class="field-label">Confirmar Nueva Contraseña</label>
                             <div class="input-wrapper">
@@ -343,7 +318,6 @@ $config = [
                                 <input type="password" name="confirm_pass" class="input-field pl-icon" required>
                             </div>
                         </div>
-
                         <div class="form-actions mt-large">
                             <button type="submit" class="btn-primary">Actualizar Contraseña</button>
                         </div>
@@ -357,12 +331,9 @@ $config = [
 
 <script>
     function switchTab(panelId, btnElement) {
-        document.querySelectorAll('.config-panel').forEach(panel => {
-            panel.classList.remove('active');
-        });
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
+        document.querySelectorAll('.config-panel').forEach(panel => panel.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+        
         document.getElementById('panel-' + panelId).classList.add('active');
         btnElement.classList.add('active');
         
@@ -380,9 +351,12 @@ $config = [
         });
 
         if (confirmed) {
-            // Aquí iría la redirección real
-            console.log("Eliminando usuario " + userId);
-            // window.location.href = 'actions/eliminar_usuario.php?id=' + userId;
+            // Feedback inmediato antes de que el navegador cambie de página
+            TrojesUI.toast('info', 'Procesando eliminación...');
+            
+            // Lógica cerrada: Redirección al action correspondiente
+            // Nota: Asegúrate de crear este archivo si no existe, o apuntar al correcto
+            window.location.href = 'actions/eliminar_usuario.php?id=' + userId;
         }
     }
 </script>
