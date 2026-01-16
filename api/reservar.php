@@ -1,109 +1,68 @@
 <?php
-// Headers CORS y JSON
+// 1. CONFIGURACIÓN DE SEGURIDAD Y CORS
+// Permitir acceso desde cualquier origen (o especificar tu dominio)
 header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+// Manejo de la solicitud preliminar (Preflight) del navegador
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
 include_once '../config/database.php';
 include_once '../models/Boleto.php';
-include_once '../models/Rifa.php'; // Necesario para obtener el precio del boleto
 
-$database = new Database();
-$db = $database->getConnection();
-$boleto = new Boleto($db);
-$rifaModel = new Rifa($db);
-
-// Obtener datos del cuerpo de la petición
+// Obtener los datos enviados (JSON)
 $data = json_decode(file_get_contents("php://input"));
 
-// Validación básica de entrada
+// 2. VALIDACIÓN CORREGIDA
+// Usamos isset() para el numero, porque empty(0) devuelve true y bloqueaba el boleto cero.
 if(
-    empty($data->rifa_id) ||
-    empty($data->boletos) ||
-    empty($data->nombre) ||
-    empty($data->telefono) ||
-    empty($data->estado)
-){
-    http_response_code(400);
-    echo json_encode(["message" => "Datos incompletos. Faltan campos obligatorios."]);
-    exit();
-}
+    isset($data->rifa_id) && 
+    isset($data->numero) && 
+    !empty($data->nombre) && 
+    !empty($data->telefono)
+) {
+    $database = new Database();
+    $db = $database->getConnection();
 
-// Convertir boletos a array si no lo es (por seguridad)
-$lista_boletos = is_array($data->boletos) ? $data->boletos : [$data->boletos];
+    // Verificación de seguridad por si falla la conexión BD
+    if(!$db) {
+        http_response_code(500);
+        echo json_encode(["success" => false, "message" => "Error interno de conexión a base de datos."]);
+        exit;
+    }
 
-// Variables para el control del proceso
-$errores = [];
-$reservados = [];
+    $boleto = new Boleto($db);
 
-// Procesar cada boleto
-foreach($lista_boletos as $numero) {
-    
-    // Preparar datos individuales para el modelo Boleto
+    // Mapear datos
     $datos_reserva = [
         'rifa_id' => $data->rifa_id,
-        'numero' => $numero,
+        'numero' => $data->numero,
         'nombre' => $data->nombre,
         'telefono' => $data->telefono,
-        'estado' => $data->estado
+        'estado' => $data->estado ?? 'No especificado'
     ];
 
-    // Llamar al método reservar existente (atomicidad por boleto)
+    // Intentar reservar
     $resultado = $boleto->reservar($datos_reserva);
 
     if($resultado['success']) {
-        $reservados[] = $numero;
+        // Éxito real
+        http_response_code(200);
+        echo json_encode($resultado);
     } else {
-        $errores[] = "Boleto #$numero: " . $resultado['message'];
+        // Fallo de negocio (ej. ya estaba ocupado)
+        // Enviamos 200 OK para que el JS lea el mensaje de error dentro del JSON
+        http_response_code(200); 
+        echo json_encode($resultado);
     }
-}
-
-// Evaluar resultado final
-if (count($reservados) > 0) {
-    
-    // --- LÓGICA DE NOTIFICACIÓN (TAREA 3) ---
-    // Solo enviamos correo si hubo al menos una reserva exitosa
-    
-    // 1. Obtener precio para calcular total (Opcional pero recomendado para el correo)
-    $infoRifa = $rifaModel->obtenerRifaPorId($data->rifa_id);
-    $precioUnitario = $infoRifa ? floatval($infoRifa['precio_boleto']) : 0;
-    $totalVenta = count($reservados) * $precioUnitario;
-
-    // 2. Preparar datos para el correo
-    $datos_notificacion = [
-        'nombre' => $data->nombre,
-        'telefono' => $data->telefono,
-        'boletos' => $reservados, // Array de los que SÍ se reservaron
-        'total' => $totalVenta
-    ];
-
-    // 3. Disparar notificación (Silenciosa, no interrumpe el flujo si falla mail())
-    $boleto->notificarVentaNueva($datos_notificacion);
-
-    // --- RESPUESTA AL CLIENTE ---
-    http_response_code(201);
-    
-    $respuesta = [
-        "message" => "Proceso finalizado.",
-        "reservados" => $reservados,
-        "cantidad" => count($reservados)
-    ];
-
-    // Si hubo errores parciales (ej. pidieron 5 y 1 estaba ocupado), los informamos
-    if(count($errores) > 0) {
-        $respuesta["advertencia"] = "Algunos boletos no pudieron reservarse.";
-        $respuesta["errores"] = $errores;
-    }
-
-    echo json_encode($respuesta);
-
 } else {
-    // Si fallaron TODOS
-    http_response_code(503);
-    echo json_encode([
-        "message" => "No se pudo realizar la reserva.",
-        "errores" => $errores
-    ]);
+    // Datos faltantes
+    http_response_code(400);
+    echo json_encode(["success" => false, "message" => "Datos incompletos. Faltan campos obligatorios."]);
 }
 ?>

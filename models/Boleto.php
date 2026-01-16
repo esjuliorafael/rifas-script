@@ -259,7 +259,7 @@ class Boleto {
         $headers = "MIME-Version: 1.0" . "\r\n";
         $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
         // IMPORTANTE: Asegúrate de configurar un remitente válido en tu servidor
-        $headers .= "From: notificaciones@tudominio.com" . "\r\n"; 
+        $headers .= "From: notif@rancholastrojes.com.mx" . "\r\n"; 
 
         // 4. Enviar correos
         foreach($destinatarios as $admin) {
