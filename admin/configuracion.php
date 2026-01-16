@@ -7,20 +7,24 @@ $database = new Database();
 $db = $database->getConnection();
 $usuarioModel = new Usuario($db);
 
-// 1. Obtener Lista de Usuarios Real
+// 1. Obtener Lista de Usuarios (para el panel de gestión)
 $usuarios = $usuarioModel->obtenerUsuarios();
 
-// 2. Obtener Preferencia de Notificación del Usuario Logueado
+// 2. Obtener Datos Reales del Usuario Logueado
 $id_actual = $_SESSION['usuario_id'];
-$notificaciones_activas = $usuarioModel->obtenerPreferenciaNotificacion($id_actual);
+$datos_usuario = $usuarioModel->obtenerPorId($id_actual);
 
-// 3. Mockup para el resto (banco, whatsapp) si aún no tienes tabla de config
+// Validamos que existan datos (por si acaso), si no, usamos valores por defecto
+$notificaciones_activas = $datos_usuario['recibir_avisos'] ?? 0;
+$email_real_usuario = $datos_usuario['email'] ?? 'admin@sistema.com';
+
+// 3. Configuración para la vista
 $config = [
     'banco' => 'BBVA Bancomer',
     'beneficiario' => 'Julio Rafael',
     'cuenta' => '1234 5678 9012 3456',
-    'notificaciones_activas' => $notificaciones_activas, // Usamos dato real
-    'email_aviso' => $_SESSION['usuario'] ?? 'admin@sistema.com', // Dato temporal
+    'notificaciones_activas' => (bool)$notificaciones_activas,
+    'email_aviso' => $email_real_usuario, // <--- AHORA SÍ USA EL CORREO REAL DE LA BD
     'tiempo_limite' => 48,
     'sistema_apartado' => true,
     'whatsapp' => '52 222 123 4567'
@@ -89,19 +93,21 @@ $config = [
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="pago">
                         
-                        <div class="field-group">
-                            <label class="field-label">Nombre del Banco</label>
-                            <div class="input-wrapper">
-                                <span class="material-symbols-outlined input-icon">account_balance</span>
-                                <input type="text" name="banco" class="input-field pl-icon" value="<?php echo $config['banco']; ?>" placeholder="Ej. BBVA">
+                        <div class="form-row">
+                            <div class="field-group">
+                                <label class="field-label">Nombre del Banco</label>
+                                <div class="input-wrapper">
+                                    <span class="material-symbols-outlined input-icon">account_balance</span>
+                                    <input type="text" name="banco" class="input-field pl-icon" value="<?php echo $config['banco']; ?>" placeholder="Ej. BBVA">
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="field-group">
-                            <label class="field-label">Nombre del Beneficiario</label>
-                            <div class="input-wrapper">
-                                <span class="material-symbols-outlined input-icon">person</span>
-                                <input type="text" name="beneficiario" class="input-field pl-icon" value="<?php echo $config['beneficiario']; ?>">
+                            <div class="field-group">
+                                <label class="field-label">Nombre del Beneficiario</label>
+                                <div class="input-wrapper">
+                                    <span class="material-symbols-outlined input-icon">person</span>
+                                    <input type="text" name="beneficiario" class="input-field pl-icon" value="<?php echo $config['beneficiario']; ?>">
+                                </div>
                             </div>
                         </div>
 
@@ -229,8 +235,11 @@ $config = [
                             <label class="field-label">Correo Destino</label>
                             <div class="input-wrapper">
                                 <span class="material-symbols-outlined input-icon">mail</span>
-                                <input type="email" name="email_aviso" class="input-field pl-icon" value="<?php echo $config['email_aviso']; ?>">
+                                <input type="email" name="email_aviso" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['email_aviso']); ?>" readonly title="Para cambiar este correo, edita el usuario en la sección Usuarios">
                             </div>
+                            <p style="font-size:0.8rem; color:var(--text-gray); margin-top:0.5rem;">
+                                Este es el correo asociado a tu cuenta de usuario.
+                            </p>
                         </div>
 
                         <div class="form-actions mt-large">
@@ -327,19 +336,21 @@ $config = [
                             </div>
                         </div>
 
-                        <div class="field-group">
-                            <label class="field-label">Nueva Contraseña</label>
-                            <div class="input-wrapper">
-                                <span class="material-symbols-outlined input-icon">lock</span>
-                                <input type="password" name="new_pass" class="input-field pl-icon" required>
+                        <div class="form-row">
+                            <div class="field-group">
+                                <label class="field-label">Nueva Contraseña</label>
+                                <div class="input-wrapper">
+                                    <span class="material-symbols-outlined input-icon">lock</span>
+                                    <input type="password" name="new_pass" class="input-field pl-icon" required>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="field-group">
-                            <label class="field-label">Confirmar Nueva Contraseña</label>
-                            <div class="input-wrapper">
-                                <span class="material-symbols-outlined input-icon">lock_clock</span>
-                                <input type="password" name="confirm_pass" class="input-field pl-icon" required>
+                            <div class="field-group">
+                                <label class="field-label">Confirmar Nueva Contraseña</label>
+                                <div class="input-wrapper">
+                                    <span class="material-symbols-outlined input-icon">lock_clock</span>
+                                    <input type="password" name="confirm_pass" class="input-field pl-icon" required>
+                                </div>
                             </div>
                         </div>
 

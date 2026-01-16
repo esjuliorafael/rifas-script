@@ -7,7 +7,7 @@ class Usuario {
     public $id;
     public $nombre;
     public $email;
-    public $usuario; // Mantenemos para compatibilidad legacy
+    public $usuario; 
     public $password;
     public $rol;
     public $estado;
@@ -18,18 +18,16 @@ class Usuario {
     }
 
     // ==========================================
-    // 1. ÁREA DE AUTENTICACIÓN (LOGIN & RECOVERY)
+    // 1. ÁREA DE AUTENTICACIÓN
     // ==========================================
 
     public function login() {
-        // Actualizado: Ahora busca por 'usuario' O 'email', y verifica estado activo
         $query = "SELECT id, nombre, email, usuario, password, rol, estado 
                   FROM " . $this->table . " 
                   WHERE (usuario = ? OR email = ?) AND estado = 1 
                   LIMIT 1";
                   
         $stmt = $this->conn->prepare($query);
-        // Bindear el mismo valor a ambos (permite login con user o email)
         $stmt->bindParam(1, $this->usuario);
         $stmt->bindParam(2, $this->usuario);
         $stmt->execute();
@@ -37,7 +35,6 @@ class Usuario {
         if($stmt->rowCount() > 0) {
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if(password_verify($this->password, $row['password'])) {
-                // Hidratar el objeto con todos los datos
                 $this->id = $row['id'];
                 $this->nombre = $row['nombre'];
                 $this->email = $row['email'];
@@ -49,7 +46,6 @@ class Usuario {
         return false;
     }
 
-    // Verificar si existe para recuperación (Legacy + Email)
     public function existeUsuario() {
         $query = "SELECT id FROM " . $this->table . " WHERE usuario = ? OR email = ? LIMIT 1";
         $stmt = $this->conn->prepare($query);
@@ -59,7 +55,6 @@ class Usuario {
         return $stmt->rowCount() > 0;
     }
 
-    // Generar Token (Mantenido igual)
     public function generarToken() {
         $token = bin2hex(random_bytes(32));
         $expira = date('Y-m-d H:i:s', strtotime('+1 hour'));
@@ -72,7 +67,7 @@ class Usuario {
         $stmt->bindParam(':token', $token);
         $stmt->bindParam(':expira', $expira);
         $stmt->bindParam(':usuario', $this->usuario);
-        $stmt->bindParam(':email', $this->usuario); // $this->usuario actúa como input genérico
+        $stmt->bindParam(':email', $this->usuario);
 
         if($stmt->execute()) {
             return $token;
@@ -80,7 +75,6 @@ class Usuario {
         return false;
     }
 
-    // Validar Token (Mantenido igual)
     public function validarToken($token) {
         $query = "SELECT id, usuario FROM " . $this->table . " 
                   WHERE token_recuperacion = :token 
@@ -99,7 +93,6 @@ class Usuario {
         return false;
     }
 
-    // Actualizar Password con Token (Mantenido igual)
     public function actualizarPasswordConToken($token, $nuevoPassword) {
         $hash = password_hash($nuevoPassword, PASSWORD_DEFAULT);
         $query = "UPDATE " . $this->table . " 
@@ -115,7 +108,6 @@ class Usuario {
     // 2. ÁREA DE GESTIÓN (ADMINISTRACIÓN)
     // ==========================================
 
-    // Listar usuarios para el panel
     public function obtenerUsuarios() {
         $query = "SELECT id, nombre, email, rol, estado, recibir_avisos FROM " . $this->table . " ORDER BY id DESC";
         $stmt = $this->conn->prepare($query);
@@ -123,9 +115,18 @@ class Usuario {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Crear nuevo usuario (Admin)
+    // --- NUEVO MÉTODO AGREGADO ---
+    // Obtiene toda la info de un usuario por su ID (necesario para configuración)
+    public function obtenerPorId($id) {
+        $query = "SELECT * FROM " . $this->table . " WHERE id = :id LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    // -----------------------------
+
     public function crearUsuario($datos) {
-        // Verificar duplicados
         $queryCheck = "SELECT id FROM " . $this->table . " WHERE email = :email";
         $stmtCheck = $this->conn->prepare($queryCheck);
         $stmtCheck->bindParam(':email', $datos['email']);
@@ -138,7 +139,6 @@ class Usuario {
         $query = "INSERT INTO " . $this->table . " 
                   (nombre, email, usuario, password, rol, estado, recibir_avisos) 
                   VALUES (:nombre, :email, :email, :password, :rol, 1, 0)";
-                  // Nota: Usamos email como 'usuario' por defecto para compatibilidad
 
         $stmt = $this->conn->prepare($query);
         $password_hash = password_hash($datos['password'], PASSWORD_DEFAULT);
@@ -154,7 +154,6 @@ class Usuario {
         return ['success' => false, 'message' => 'Error al crear usuario.'];
     }
 
-    // Verificar password actual (Seguridad)
     public function verificarPasswordActual($id, $password_input) {
         $query = "SELECT password FROM " . $this->table . " WHERE id = :id LIMIT 1";
         $stmt = $this->conn->prepare($query);
@@ -168,7 +167,6 @@ class Usuario {
         return false;
     }
 
-    // Actualizar Password (Perfil propio)
     public function actualizarPassword($id, $new_pass) {
         $query = "UPDATE " . $this->table . " SET password = :password WHERE id = :id";
         $stmt = $this->conn->prepare($query);
@@ -178,7 +176,6 @@ class Usuario {
         return $stmt->execute();
     }
 
-    // Activar/Desactivar Notificaciones
     public function actualizarPreferencias($id, $recibir_avisos) {
         $query = "UPDATE " . $this->table . " SET recibir_avisos = :recibir_avisos WHERE id = :id";
         $stmt = $this->conn->prepare($query);
@@ -188,7 +185,6 @@ class Usuario {
         return $stmt->execute();
     }
     
-    // Obtener preferencia de un usuario
     public function obtenerPreferenciaNotificacion($id) {
         $query = "SELECT recibir_avisos FROM " . $this->table . " WHERE id = :id LIMIT 1";
         $stmt = $this->conn->prepare($query);
@@ -198,7 +194,6 @@ class Usuario {
         return $row ? (bool)$row['recibir_avisos'] : false;
     }
 
-    // Eliminar usuario
     public function eliminarUsuario($id) {
         $query = "DELETE FROM " . $this->table . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);
