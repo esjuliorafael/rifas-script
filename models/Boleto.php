@@ -190,26 +190,33 @@ class Boleto {
      * Se llama DESPUÉS de procesar el array de boletos en el controlador
      */
     public function notificarVentaNueva($datos_venta) {
-        // 1. Obtener usuarios que quieren recibir avisos (recibir_avisos = 1 y activos)
+        // 1. Incluir y consultar Configuración
+        include_once 'Configuracion.php'; 
+        $configModel = new Configuracion($this->conn);
+        
+        // Obtenemos el correo remitente de la BD (con fallback por seguridad)
+        $remitente = $configModel->obtener('email_remitente');
+        if(empty($remitente)) $remitente = 'notificaciones@tusitio.com';
+
+        // 2. Obtener usuarios destinatarios
         $query = "SELECT email, nombre FROM usuarios WHERE recibir_avisos = 1 AND estado = 1";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         $destinatarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Si nadie quiere correos, terminamos
         if(count($destinatarios) === 0) return;
 
-        // 2. Preparar Datos del Correo
+        // 3. Preparar Datos
         $cliente = htmlspecialchars($datos_venta['nombre']);
         $telefono = htmlspecialchars($datos_venta['telefono']);
-        // Manejo flexible de boletos (array o string)
         $boletos = is_array($datos_venta['boletos']) ? implode(', ', $datos_venta['boletos']) : $datos_venta['boletos'];
         $cantidad = is_array($datos_venta['boletos']) ? count($datos_venta['boletos']) : 1;
         $total = isset($datos_venta['total']) ? "$" . number_format($datos_venta['total'], 2) : 'Pendiente';
+        $rifa_titulo = isset($datos_venta['rifa_titulo']) ? $datos_venta['rifa_titulo'] : 'Rifa';
         
         $asunto = "Nueva Venta: " . $cliente . " (" . $cantidad . " boletos)";
         
-        // Plantilla HTML Limpia
+        // 4. Plantilla HTML (Optimizada)
         $mensaje = "
         <html>
         <body style='font-family: Arial, sans-serif; color: #333; line-height: 1.6;'>
@@ -258,10 +265,9 @@ class Boleto {
         // 3. Cabeceras
         $headers = "MIME-Version: 1.0" . "\r\n";
         $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-        // IMPORTANTE: Asegúrate de configurar un remitente válido en tu servidor
-        $headers .= "From: notif@rancholastrojes.com.mx" . "\r\n"; 
+        $headers .= "From: " . $remitente . "\r\n";
+        $headers .= "Reply-To: " . $remitente . "\r\n";
 
-        // 4. Enviar correos
         foreach($destinatarios as $admin) {
             @mail($admin['email'], $asunto, $mensaje, $headers);
         }

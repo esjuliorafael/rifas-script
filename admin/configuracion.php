@@ -2,29 +2,39 @@
 include_once 'includes/header.php';
 include_once '../config/database.php';
 include_once '../models/Usuario.php';
+include_once '../models/Configuracion.php'; // NUEVO MODELO
 
 $database = new Database();
 $db = $database->getConnection();
 $usuarioModel = new Usuario($db);
+$configModel = new Configuracion($db);
 
-// 1. Obtener Lista de Usuarios
+// 1. Obtener Lista de Usuarios (para el panel de gestión)
 $usuarios = $usuarioModel->obtenerUsuarios();
 
-// 2. Obtener Datos Reales del Usuario Logueado
+// 2. Obtener Datos Reales del Usuario Logueado (Para notificaciones personales)
 $id_actual = $_SESSION['usuario_id'];
 $datos_usuario = $usuarioModel->obtenerPorId($id_actual);
 
-// 3. Configuración para la vista (Datos Reales)
+// 3. Obtener Configuración Global del Sistema (Base de Datos)
+$sys_conf = $configModel->obtenerTodo();
+
+// 4. Preparar array de vista (Fusión de datos globales y personales)
 $config = [
-    'banco' => 'BBVA Bancomer', 
-    'beneficiario' => 'Julio Rafael',
-    'cuenta' => '1234 5678 9012 3456',
-    // Validación segura
+    // Datos Bancarios (Desde BD)
+    'banco' => $sys_conf['banco_nombre'] ?? '',
+    'beneficiario' => $sys_conf['banco_beneficiario'] ?? '',
+    'cuenta' => $sys_conf['banco_cuenta'] ?? '',
+    
+    // Configuración General (Desde BD)
+    'tiempo_limite' => $sys_conf['tiempo_limite'] ?? 48,
+    'sistema_apartado' => (isset($sys_conf['sistema_apartado']) && $sys_conf['sistema_apartado'] == 1),
+    'whatsapp' => $sys_conf['whatsapp_numero'] ?? '',
+    'email_remitente' => $sys_conf['email_remitente'] ?? '', // Nuevo campo para "From"
+
+    // Preferencias Personales (Desde Tabla Usuarios)
     'notificaciones_activas' => ($datos_usuario && $datos_usuario['recibir_avisos'] == 1),
     'email_aviso' => $datos_usuario['email'] ?? '', 
-    'tiempo_limite' => 48,
-    'sistema_apartado' => true,
-    'whatsapp' => '52 222 123 4567'
 ];
 ?>
 
@@ -83,27 +93,31 @@ $config = [
                     </div>
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="pago">
+                        
                         <div class="field-group">
                             <label class="field-label">Nombre del Banco</label>
                             <div class="input-wrapper">
                                 <span class="material-symbols-outlined input-icon">account_balance</span>
-                                <input type="text" name="banco" class="input-field pl-icon" value="<?php echo $config['banco']; ?>" placeholder="Ej. BBVA">
+                                <input type="text" name="banco_nombre" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['banco']); ?>" placeholder="Ej. BBVA">
                             </div>
                         </div>
+
                         <div class="field-group">
                             <label class="field-label">Nombre del Beneficiario</label>
                             <div class="input-wrapper">
                                 <span class="material-symbols-outlined input-icon">person</span>
-                                <input type="text" name="beneficiario" class="input-field pl-icon" value="<?php echo $config['beneficiario']; ?>">
+                                <input type="text" name="banco_beneficiario" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['beneficiario']); ?>">
                             </div>
                         </div>
+
                         <div class="field-group">
                             <label class="field-label">CLABE o Tarjeta</label>
                             <div class="input-wrapper">
                                 <span class="material-symbols-outlined input-icon">pin</span>
-                                <input type="text" name="cuenta" class="input-field pl-icon" value="<?php echo $config['cuenta']; ?>">
+                                <input type="text" name="banco_cuenta" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['cuenta']); ?>">
                             </div>
                         </div>
+
                         <div class="form-actions mt-large">
                             <button type="submit" class="btn-primary">Guardar Cambios</button>
                         </div>
@@ -124,16 +138,18 @@ $config = [
                     </div>
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="apartado">
+
                         <div class="toggle-wrapper">
                             <div class="toggle-info">
                                 <h4>Sistema de Apartado</h4>
                                 <span>Liberar boletos impagos automáticamente</span>
                             </div>
                             <label class="switch">
-                                <input type="checkbox" name="apartado_active" <?php echo $config['sistema_apartado'] ? 'checked' : ''; ?>>
+                                <input type="checkbox" name="sistema_apartado" <?php echo $config['sistema_apartado'] ? 'checked' : ''; ?>>
                                 <span class="slider"></span>
                             </label>
                         </div>
+
                         <div class="field-group">
                             <label class="field-label">Tiempo Límite (Horas)</label>
                             <div class="input-wrapper">
@@ -146,6 +162,7 @@ $config = [
                                 </select>
                             </div>
                         </div>
+
                         <div class="form-actions mt-large">
                             <button type="submit" class="btn-primary">Actualizar Reglas</button>
                         </div>
@@ -166,14 +183,16 @@ $config = [
                     </div>
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="whatsapp">
+                        
                         <div class="field-group">
                             <label class="field-label">Número de WhatsApp</label>
                             <div class="input-wrapper">
                                 <span class="material-symbols-outlined input-icon">call</span>
-                                <input type="tel" name="whatsapp" class="input-field pl-icon" value="<?php echo $config['whatsapp']; ?>" placeholder="Ej. 52 123 456 7890">
+                                <input type="tel" name="whatsapp_numero" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['whatsapp']); ?>" placeholder="Ej. 52 123 456 7890">
                             </div>
                             <p class="field-hint">Este número aparecerá en el pie de página de los boletos digitales.</p>
                         </div>
+
                         <div class="form-actions mt-large">
                             <button type="submit" class="btn-primary">Actualizar Número</button>
                         </div>
@@ -194,24 +213,38 @@ $config = [
                     </div>
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="notificaciones">
+
                         <div class="toggle-wrapper">
                             <div class="toggle-info">
                                 <h4>Activar Notificaciones</h4>
-                                <span>Enviar correos automáticos</span>
+                                <span>Enviar correos automáticos a mí</span>
                             </div>
                             <label class="switch">
                                 <input type="checkbox" name="notif_active" <?php echo $config['notificaciones_activas'] ? 'checked' : ''; ?>>
                                 <span class="slider"></span>
                             </label>
                         </div>
+
                         <div class="field-group">
-                            <label class="field-label">Correo Destino</label>
+                            <label class="field-label">Correo Destino (Mi Usuario)</label>
                             <div class="input-wrapper">
                                 <span class="material-symbols-outlined input-icon">mail</span>
-                                <input type="email" name="email_aviso" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['email_aviso']); ?>" readonly title="Para cambiar este correo, edita el usuario en la sección Usuarios">
+                                <input type="email" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['email_aviso']); ?>" readonly title="Para cambiar este correo, edita el usuario en la sección Usuarios">
                             </div>
                             <p class="field-hint">Este es el correo asociado a tu cuenta de usuario.</p>
                         </div>
+
+                        <hr style="border:0; border-top:1px solid #eee; margin: 2rem 0;">
+
+                        <div class="field-group">
+                            <label class="field-label">Correo Remitente (Sistema)</label>
+                            <div class="input-wrapper">
+                                <span class="material-symbols-outlined input-icon">alternate_email</span>
+                                <input type="email" name="email_remitente" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['email_remitente']); ?>" placeholder="notificaciones@tusitio.com">
+                            </div>
+                            <p class="field-hint">Este correo aparecerá en el "De:" (From) de los correos enviados.</p>
+                        </div>
+
                         <div class="form-actions mt-large">
                             <button type="submit" class="btn-primary">Guardar Preferencias</button>
                         </div>
@@ -327,54 +360,31 @@ $config = [
 </section>
 
 <script>
-    // Recuperar y activar la pestaña guardada al cargar la página
+    // Recuperar y activar la pestaña guardada
     document.addEventListener('DOMContentLoaded', () => {
         const savedTab = localStorage.getItem('config_active_tab');
-        
         if (savedTab) {
-            // Intentar encontrar el botón correspondiente
             const targetBtn = document.getElementById('tab-btn-' + savedTab);
-            if (targetBtn) {
-                // Simular clic para activar la pestaña y estilos visuales
-                targetBtn.click();
-            }
+            if (targetBtn) targetBtn.click();
         }
     });
 
     function switchTab(panelId, btnElement) {
-        // 1. Guardar la elección en el navegador
         localStorage.setItem('config_active_tab', panelId);
-
-        // 2. Ocultar todos los paneles
-        document.querySelectorAll('.config-panel').forEach(panel => {
-            panel.classList.remove('active');
-        });
-
-        // 3. Desactivar todos los botones
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-
-        // 4. Mostrar panel y activar botón actual
-        const panel = document.getElementById('panel-' + panelId);
-        if(panel) panel.classList.add('active');
-        
-        if(btnElement) btnElement.classList.add('active');
-        
-        // 5. UX Móvil
-        if(window.innerWidth < 1024) {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        document.querySelectorAll('.config-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('panel-' + panelId).classList.add('active');
+        btnElement.classList.add('active');
+        if(window.innerWidth < 1024) window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     async function confirmDeleteUser(userId) {
         const confirmed = await TrojesUI.confirm({
             title: '¿Eliminar Usuario?',
-            message: 'Esta acción no se puede deshacer. El usuario perderá acceso inmediato.',
+            message: 'Esta acción no se puede deshacer.',
             confirmText: 'Sí, Eliminar',
             confirmColor: '#dc2626'
         });
-
         if (confirmed) {
             TrojesUI.toast('info', 'Procesando eliminación...');
             window.location.href = 'actions/eliminar_usuario.php?id=' + userId;
