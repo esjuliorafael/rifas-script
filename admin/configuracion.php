@@ -15,16 +15,13 @@ $id_actual = $_SESSION['usuario_id'];
 $datos_usuario = $usuarioModel->obtenerPorId($id_actual);
 
 // 3. Configuración para la vista (Datos Reales)
-// Usamos validación segura para evitar errores si el usuario no tiene datos completos
 $config = [
-    'banco' => 'BBVA Bancomer', // Placeholder o futuro DB
+    'banco' => 'BBVA Bancomer', 
     'beneficiario' => 'Julio Rafael',
     'cuenta' => '1234 5678 9012 3456',
-    
-    // Lógica cerrada: Refleja la preferencia real de la BD
+    // Validación segura
     'notificaciones_activas' => ($datos_usuario && $datos_usuario['recibir_avisos'] == 1),
     'email_aviso' => $datos_usuario['email'] ?? '', 
-    
     'tiempo_limite' => 48,
     'sistema_apartado' => true,
     'whatsapp' => '52 222 123 4567'
@@ -44,27 +41,27 @@ $config = [
         
         <aside class="config-sidebar">
             <nav class="config-nav">
-                <button onclick="switchTab('payment', this)" class="nav-tab active">
+                <button id="tab-btn-payment" onclick="switchTab('payment', this)" class="nav-tab active">
                     <span class="material-symbols-outlined icon-tab">account_balance</span>
                     Métodos de Pago
                 </button>
-                <button onclick="switchTab('hold', this)" class="nav-tab">
+                <button id="tab-btn-hold" onclick="switchTab('hold', this)" class="nav-tab">
                     <span class="material-symbols-outlined icon-tab">timer</span>
                     Tiempo de Apartado
                 </button>
-                <button onclick="switchTab('whatsapp', this)" class="nav-tab">
+                <button id="tab-btn-whatsapp" onclick="switchTab('whatsapp', this)" class="nav-tab">
                     <span class="material-symbols-outlined icon-tab">chat</span>
                     WhatsApp
                 </button>
-                <button onclick="switchTab('notifications', this)" class="nav-tab">
+                <button id="tab-btn-notifications" onclick="switchTab('notifications', this)" class="nav-tab">
                     <span class="material-symbols-outlined icon-tab">notifications</span>
                     Notificaciones
                 </button>
-                <button onclick="switchTab('users', this)" class="nav-tab">
+                <button id="tab-btn-users" onclick="switchTab('users', this)" class="nav-tab">
                     <span class="material-symbols-outlined icon-tab">group</span>
                     Usuarios
                 </button>
-                <button onclick="switchTab('security', this)" class="nav-tab">
+                <button id="tab-btn-security" onclick="switchTab('security', this)" class="nav-tab">
                     <span class="material-symbols-outlined icon-tab">lock</span>
                     Seguridad
                 </button>
@@ -330,13 +327,41 @@ $config = [
 </section>
 
 <script>
+    // Recuperar y activar la pestaña guardada al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedTab = localStorage.getItem('config_active_tab');
+        
+        if (savedTab) {
+            // Intentar encontrar el botón correspondiente
+            const targetBtn = document.getElementById('tab-btn-' + savedTab);
+            if (targetBtn) {
+                // Simular clic para activar la pestaña y estilos visuales
+                targetBtn.click();
+            }
+        }
+    });
+
     function switchTab(panelId, btnElement) {
-        document.querySelectorAll('.config-panel').forEach(panel => panel.classList.remove('active'));
-        document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+        // 1. Guardar la elección en el navegador
+        localStorage.setItem('config_active_tab', panelId);
+
+        // 2. Ocultar todos los paneles
+        document.querySelectorAll('.config-panel').forEach(panel => {
+            panel.classList.remove('active');
+        });
+
+        // 3. Desactivar todos los botones
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+
+        // 4. Mostrar panel y activar botón actual
+        const panel = document.getElementById('panel-' + panelId);
+        if(panel) panel.classList.add('active');
         
-        document.getElementById('panel-' + panelId).classList.add('active');
-        btnElement.classList.add('active');
+        if(btnElement) btnElement.classList.add('active');
         
+        // 5. UX Móvil
         if(window.innerWidth < 1024) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -351,11 +376,7 @@ $config = [
         });
 
         if (confirmed) {
-            // Feedback inmediato antes de que el navegador cambie de página
             TrojesUI.toast('info', 'Procesando eliminación...');
-            
-            // Lógica cerrada: Redirección al action correspondiente
-            // Nota: Asegúrate de crear este archivo si no existe, o apuntar al correcto
             window.location.href = 'actions/eliminar_usuario.php?id=' + userId;
         }
     }
