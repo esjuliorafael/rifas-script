@@ -15,6 +15,8 @@ $db = $database->getConnection();
 $rifaModel = new Rifa($db);
 $boletoModel = new Boleto($db);
 
+$boletoModel->liberarReservasExpiradas();
+
 $total_rifas = count($rifaModel->obtenerTodas());
 $ventas_totales = count($boletoModel->obtenerVentas()); 
 // Podrías agregar método para sumar dinero total en Boleto.php

@@ -7,13 +7,50 @@ class Boleto {
         $this->conn = $db;
     }
 
-    // --- LÓGICA DE RESERVA (INTACTA) ---
+    // ==========================================
+    // 1. NUEVA LÓGICA: LIMPIEZA AUTOMÁTICA
+    // ==========================================
+    
+    public function liberarReservasExpiradas() {
+        // Incluir configuración para leer reglas dinámicas
+        include_once 'Configuracion.php';
+        $configModel = new Configuracion($this->conn);
+        
+        // Obtener reglas de la BD
+        $sistema_apartado = $configModel->obtener('sistema_apartado');
+        $tiempo_limite = $configModel->obtener('tiempo_limite');
+
+        // Si el sistema no está activo (1), no hacemos nada
+        if ($sistema_apartado != 1) {
+            return 0;
+        }
+
+        // Definir horas límite (Fallback de seguridad: 48 horas)
+        $horas = (is_numeric($tiempo_limite) && $tiempo_limite > 0) ? (int)$tiempo_limite : 48;
+
+        // Ejecutar eliminación: Estado 'pendiente' Y Fecha < (Ahora - Horas)
+        $query = "DELETE FROM " . $this->table . " 
+                  WHERE estado_pago = 'pendiente' 
+                  AND fecha < DATE_SUB(NOW(), INTERVAL :horas HOUR)";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':horas', $horas, PDO::PARAM_INT);
+        
+        if($stmt->execute()) {
+            return $stmt->rowCount(); 
+        }
+        return 0;
+    }
+
+    // ==========================================
+    // 2. LÓGICA TRANSACCIONAL (RESERVA)
+    // ==========================================
+
     public function reservar($datos) {
-        // 1. Validar disponibilidad (Bloqueo para concurrencia)
         $this->conn->beginTransaction();
 
         try {
-            // Verificar si ya existe
+            // Verificar disponibilidad (Bloqueo FOR UPDATE)
             $queryCheck = "SELECT id FROM " . $this->table . " 
                            WHERE rifa_id = :rifa_id AND numero_boleto = :numero FOR UPDATE";
             $stmtCheck = $this->conn->prepare($queryCheck);
@@ -26,10 +63,10 @@ class Boleto {
                 return ['success' => false, 'message' => 'El boleto ' . $datos['numero'] . ' ya ha sido ganado o apartado.'];
             }
 
-            // Insertar venta
+            // Insertar venta (Usando NOW() para la fecha exacta)
             $query = "INSERT INTO " . $this->table . " 
                       (rifa_id, numero_boleto, cliente_nombre, cliente_telefono, cliente_estado, estado_pago, fecha) 
-                      VALUES (:rifa_id, :numero, :nombre, :telefono, :estado_cliente, :estado_pago, NOW())";
+                      VALUES (:rifa_id, :numero, :nombre, :telefono, :estado_cliente, 'pendiente', NOW())";
 
             $stmt = $this->conn->prepare($query);
 
@@ -43,12 +80,20 @@ class Boleto {
             $stmt->bindParam(':nombre', $datos['nombre']);
             $stmt->bindParam(':telefono', $datos['telefono']);
             $stmt->bindParam(':estado_cliente', $datos['estado']);
-            // Por defecto entra como pendiente
-            $estado_pago = 'pendiente'; 
-            $stmt->bindParam(':estado_pago', $estado_pago);
 
             if($stmt->execute()) {
                 $this->conn->commit();
+                
+                // Notificar sin detener el flujo si falla el correo
+                try {
+                    // Calcular cantidad para el asunto del correo
+                    $cantidad = is_array($datos['boletos'] ?? null) ? count($datos['boletos']) : 1;
+                    $datos['total'] = $this->calcularTotal($datos['rifa_id'], $cantidad);
+                    $this->notificarVentaNueva($datos);
+                } catch (Exception $e) {
+                    // Log silencioso o ignorar
+                }
+
                 return ['success' => true, 'message' => 'Boleto apartado exitosamente.'];
             } else {
                 $this->conn->rollBack();
@@ -61,7 +106,10 @@ class Boleto {
         }
     }
 
-    // --- OBTENER VENTAS AGRUPADAS (INTACTA) ---
+    // ==========================================
+    // 3. MÉTODOS DE LECTURA (RESTAURADOS)
+    // ==========================================
+
     public function obtenerVentas($filtros = [], $limit = 20, $offset = 0) {
         $query = "SELECT 
                     GROUP_CONCAT(v.id SEPARATOR ',') as ids_venta,
@@ -112,7 +160,6 @@ class Boleto {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // --- CONTAR GRUPOS (INTACTA) ---
     public function contarVentas($filtros = []) {
         $query = "SELECT COUNT(*) as total FROM (
                     SELECT v.id 
@@ -148,7 +195,6 @@ class Boleto {
         return $row['total'];
     }
 
-    // --- OBTENER OCUPADOS (INTACTA) ---
     public function obtenerOcupados($rifa_id) {
         $query = "SELECT numero_boleto, estado_pago, cliente_nombre, cliente_estado 
                   FROM " . $this->table . " 
@@ -159,7 +205,6 @@ class Boleto {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    // --- OBTENER VENTAS DASHBOARD (INTACTA) ---
     public function obtenerUltimasVentasAgrupadas($limite = 8) {
         $query = "SELECT 
                     v.cliente_nombre, 
@@ -182,23 +227,17 @@ class Boleto {
     }
 
     // ==========================================
-    // NUEVA FUNCIONALIDAD: NOTIFICACIONES
+    // 4. NOTIFICACIONES Y HELPERS
     // ==========================================
     
-    /**
-     * Envía un único correo a los administradores suscritos
-     * Se llama DESPUÉS de procesar el array de boletos en el controlador
-     */
     public function notificarVentaNueva($datos_venta) {
-        // 1. Incluir y consultar Configuración
+        // 1. Configuración Dinámica (Remitente)
         include_once 'Configuracion.php'; 
         $configModel = new Configuracion($this->conn);
-        
-        // Obtenemos el correo remitente de la BD (con fallback por seguridad)
         $remitente = $configModel->obtener('email_remitente');
-        if(empty($remitente)) $remitente = 'notificaciones@tusitio.com';
+        if(empty($remitente)) $remitente = 'notificaciones@rancholastrojes.com.mx';
 
-        // 2. Obtener usuarios destinatarios
+        // 2. Destinatarios Dinámicos (Usuarios con alertas)
         $query = "SELECT email, email_alternativo, nombre FROM usuarios WHERE recibir_avisos = 1 AND estado = 1";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
@@ -209,71 +248,89 @@ class Boleto {
         // 3. Preparar Datos
         $cliente = htmlspecialchars($datos_venta['nombre']);
         $telefono = htmlspecialchars($datos_venta['telefono']);
-        $boletos = is_array($datos_venta['boletos']) ? implode(', ', $datos_venta['boletos']) : $datos_venta['boletos'];
-        $cantidad = is_array($datos_venta['boletos']) ? count($datos_venta['boletos']) : 1;
-        $total = isset($datos_venta['total']) ? "$" . number_format($datos_venta['total'], 2) : 'Pendiente';
-        $rifa_titulo = isset($datos_venta['rifa_titulo']) ? $datos_venta['rifa_titulo'] : 'Rifa';
         
+        $boletos = '';
+        $cantidad = 1;
+        if (isset($datos_venta['boletos']) && is_array($datos_venta['boletos'])) {
+            $boletos = implode(', ', $datos_venta['boletos']);
+            $cantidad = count($datos_venta['boletos']);
+        } else {
+            $boletos = $datos_venta['numero'];
+        }
+
+        $total = isset($datos_venta['total']) ? "$" . number_format($datos_venta['total'], 2) : 'Pendiente';
         $asunto = "Nueva Venta: " . $cliente . " (" . $cantidad . " boletos)";
         
-        // 4. Plantilla HTML (Optimizada)
+        // 4. Plantilla HTML (Diseño Completo)
         $mensaje = "
         <html>
-        <body style='font-family: Arial, sans-serif; color: #333; line-height: 1.6;'>
-            <div style='max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;'>
-                <div style='background-color: #2563eb; color: white; padding: 15px; text-align: center;'>
-                    <h2 style='margin:0;'>¡Nueva Venta Registrada!</h2>
+        <body style='font-family: Arial, sans-serif; color: #333; line-height: 1.6; background-color: #f4f4f4; padding: 20px;'>
+            <div style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
+                
+                <div style='background-color: #2563eb; color: white; padding: 20px; text-align: center;'>
+                    <h2 style='margin:0; font-size: 24px;'>¡Nueva Venta Registrada!</h2>
+                    <p style='margin: 5px 0 0; opacity: 0.9;'>Sistema de Rifas Las Trojes</p>
                 </div>
-                <div style='padding: 20px;'>
-                    <p>Se ha registrado un nuevo apartado de boletos en el sistema.</p>
+                
+                <div style='padding: 30px;'>
+                    <p style='margin-bottom: 20px; font-size: 16px;'>Se ha registrado un nuevo apartado de boletos. Aquí están los detalles:</p>
                     
-                    <table style='width: 100%; border-collapse: collapse; margin-top: 15px;'>
+                    <table style='width: 100%; border-collapse: collapse; background-color: #f9fafb; border-radius: 8px; overflow: hidden;'>
                         <tr>
-                            <td style='padding: 8px; border-bottom: 1px solid #eee;'><strong>Cliente:</strong></td>
-                            <td style='padding: 8px; border-bottom: 1px solid #eee;'>{$cliente}</td>
+                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; color: #666;'><strong>Cliente:</strong></td>
+                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; font-weight: 500;'>{$cliente}</td>
                         </tr>
                         <tr>
-                            <td style='padding: 8px; border-bottom: 1px solid #eee;'><strong>Teléfono:</strong></td>
-                            <td style='padding: 8px; border-bottom: 1px solid #eee;'>{$telefono}</td>
+                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; color: #666;'><strong>Teléfono:</strong></td>
+                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; font-weight: 500;'>{$telefono}</td>
                         </tr>
                         <tr>
-                            <td style='padding: 8px; border-bottom: 1px solid #eee;'><strong>Cantidad:</strong></td>
-                            <td style='padding: 8px; border-bottom: 1px solid #eee;'>{$cantidad} boletos</td>
+                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; color: #666;'><strong>Cantidad:</strong></td>
+                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; font-weight: 500;'>{$cantidad} boletos</td>
                         </tr>
                         <tr>
-                            <td style='padding: 8px; border-bottom: 1px solid #eee;'><strong>Números:</strong></td>
-                            <td style='padding: 8px; border-bottom: 1px solid #eee; color: #2563eb; font-weight: bold;'>{$boletos}</td>
+                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; color: #666;'><strong>Números:</strong></td>
+                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; color: #2563eb; font-weight: bold;'>{$boletos}</td>
                         </tr>
                         <tr>
-                            <td style='padding: 8px; border-bottom: 1px solid #eee;'><strong>Total Estimado:</strong></td>
-                            <td style='padding: 8px; border-bottom: 1px solid #eee;'>{$total}</td>
+                            <td style='padding: 12px 15px; color: #666;'><strong>Total Estimado:</strong></td>
+                            <td style='padding: 12px 15px; color: #166534; font-weight: bold;'>{$total}</td>
                         </tr>
                     </table>
                     
-                    <p style='margin-top: 20px; font-size: 0.9em; color: #666;'>
-                        Ingresa al panel administrativo para gestionar esta venta.
-                    </p>
+                    <div style='margin-top: 30px; text-align: center;'>
+                        <a href='" . (isset($_SERVER['HTTP_HOST']) ? 'https://' . $_SERVER['HTTP_HOST'] . '/admin' : '#') . "' style='display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;'>Gestionar Venta en Panel</a>
+                    </div>
                 </div>
-                <div style='background-color: #f9fafb; padding: 10px; text-align: center; font-size: 0.8em; color: #888;'>
-                    Notificación automática del sistema de rifas.
+                
+                <div style='background-color: #f1f5f9; padding: 15px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;'>
+                    Este es un mensaje automático. Por favor no respondas a este correo.<br>
+                    &copy; " . date('Y') . " Rancho Las Trojes. Todos los derechos reservados.
                 </div>
             </div>
         </body>
         </html>
         ";
 
-        // 3. Cabeceras
+        // 5. Enviar
         $headers = "MIME-Version: 1.0" . "\r\n";
         $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
         $headers .= "From: " . $remitente . "\r\n";
         $headers .= "Reply-To: " . $remitente . "\r\n";
 
         foreach($destinatarios as $admin) {
-            // Lógica de decisión: Si tiene alternativo, usa ese. Si no, usa el principal.
             $email_destino = !empty($admin['email_alternativo']) ? $admin['email_alternativo'] : $admin['email'];
-            
             @mail($email_destino, $asunto, $mensaje, $headers);
         }
+    }
+
+    private function calcularTotal($rifa_id, $cantidad) {
+        $q = "SELECT precio_boleto FROM rifas WHERE id = :id";
+        $s = $this->conn->prepare($q);
+        $s->bindParam(':id', $rifa_id);
+        $s->execute();
+        $r = $s->fetch(PDO::FETCH_ASSOC);
+        return $r ? $r['precio_boleto'] * $cantidad : 0;
     }
 }
 ?>

@@ -10,6 +10,8 @@ $database = new Database();
 $db = $database->getConnection();
 $boletoModel = new Boleto($db);
 
+$boletoModel->liberarReservasExpiradas();
+
 // Capturar parámetros
 $pagina_actual = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limite_por_pagina = 20;
