@@ -45,12 +45,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // 4. NOTIFICACIONES (Híbrido: Usuario + Sistema)
+    // 4. NOTIFICACIONES
     if ($tipo === 'notificaciones') {
-        // A) Preferencia del Usuario (Toggle)
+        // A) Preferencia del Usuario (Toggle + Email Alternativo)
         $usuarioModel = new Usuario($db);
         $activar = isset($_POST['notif_active']); 
-        $usuarioModel->actualizarPreferencias($_SESSION['usuario_id'], $activar);
+        
+        // Capturar el email que el usuario escribió en el input
+        $email_custom = isset($_POST['email_aviso']) ? $_POST['email_aviso'] : '';
+
+        // Guardar ambos datos
+        $usuarioModel->actualizarPreferencias($_SESSION['usuario_id'], $activar, $email_custom);
 
         // B) Configuración del Sistema (Remitente)
         if (isset($_POST['email_remitente'])) {

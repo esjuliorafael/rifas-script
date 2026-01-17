@@ -199,7 +199,7 @@ class Boleto {
         if(empty($remitente)) $remitente = 'notificaciones@tusitio.com';
 
         // 2. Obtener usuarios destinatarios
-        $query = "SELECT email, nombre FROM usuarios WHERE recibir_avisos = 1 AND estado = 1";
+        $query = "SELECT email, email_alternativo, nombre FROM usuarios WHERE recibir_avisos = 1 AND estado = 1";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         $destinatarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -269,7 +269,10 @@ class Boleto {
         $headers .= "Reply-To: " . $remitente . "\r\n";
 
         foreach($destinatarios as $admin) {
-            @mail($admin['email'], $asunto, $mensaje, $headers);
+            // Lógica de decisión: Si tiene alternativo, usa ese. Si no, usa el principal.
+            $email_destino = !empty($admin['email_alternativo']) ? $admin['email_alternativo'] : $admin['email'];
+            
+            @mail($email_destino, $asunto, $mensaje, $headers);
         }
     }
 }

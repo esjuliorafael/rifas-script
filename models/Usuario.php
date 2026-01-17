@@ -176,11 +176,13 @@ class Usuario {
         return $stmt->execute();
     }
 
-    public function actualizarPreferencias($id, $recibir_avisos) {
-        $query = "UPDATE " . $this->table . " SET recibir_avisos = :recibir_avisos WHERE id = :id";
+    public function actualizarPreferencias($id, $recibir_avisos, $email_alternativo = null) {
+        $query = "UPDATE " . $this->table . " SET recibir_avisos = :recibir_avisos, email_alternativo = :email_alt WHERE id = :id";
         $stmt = $this->conn->prepare($query);
         $val = $recibir_avisos ? 1 : 0;
+        $email_val = !empty($email_alternativo) ? $email_alternativo : null;
         $stmt->bindParam(':recibir_avisos', $val, PDO::PARAM_INT);
+        $stmt->bindParam(':email_alt', $email_val);
         $stmt->bindParam(':id', $id);
         return $stmt->execute();
     }

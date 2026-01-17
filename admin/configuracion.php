@@ -34,7 +34,7 @@ $config = [
 
     // Preferencias Personales (Desde Tabla Usuarios)
     'notificaciones_activas' => ($datos_usuario && $datos_usuario['recibir_avisos'] == 1),
-    'email_aviso' => $datos_usuario['email'] ?? '', 
+    'email_aviso' => !empty($datos_usuario['email_alternativo']) ? $datos_usuario['email_alternativo'] : ($datos_usuario['email'] ?? ''),
 ];
 ?>
 
@@ -229,9 +229,9 @@ $config = [
                             <label class="field-label">Correo Destino (Mi Usuario)</label>
                             <div class="input-wrapper">
                                 <span class="material-symbols-outlined input-icon">mail</span>
-                                <input type="email" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['email_aviso']); ?>" readonly title="Para cambiar este correo, edita el usuario en la sección Usuarios">
+                                <input type="email" name="email_aviso" class="input-field pl-icon" value="<?php echo htmlspecialchars($config['email_aviso']); ?>" placeholder="tucorreo@ejemplo.com">
                             </div>
-                            <p class="field-hint">Este es el correo asociado a tu cuenta de usuario.</p>
+                            <p class="field-hint">Este será el correo donde recibirás las notificaciones de ventas.</p>
                         </div>
 
                         <hr style="border:0; border-top:1px solid #eee; margin: 2rem 0;">
