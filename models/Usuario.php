@@ -195,6 +195,19 @@ class Usuario {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? (bool)$row['recibir_avisos'] : false;
     }
+    
+    public function cambiarEstado($id, $nuevo_estado) {
+        $query = "UPDATE " . $this->table . " SET estado = :estado WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        
+        // Aseguramos que sea entero (0 o 1)
+        $val = intval($nuevo_estado);
+        
+        $stmt->bindParam(':estado', $val, PDO::PARAM_INT);
+        $stmt->bindParam(':id', $id);
+        
+        return $stmt->execute();
+    }
 
     public function eliminarUsuario($id) {
         $query = "DELETE FROM " . $this->table . " WHERE id = :id";

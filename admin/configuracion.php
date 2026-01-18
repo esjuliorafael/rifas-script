@@ -12,6 +12,10 @@ $configModel = new Configuracion($db);
 // 1. Obtener Lista de Usuarios (para el panel de gestión)
 $usuarios = $usuarioModel->obtenerUsuarios();
 
+usort($usuarios, function($a, $b) {
+    return $a['id'] - $b['id'];
+});
+
 // 2. Obtener Datos Reales del Usuario Logueado (Para notificaciones personales)
 $id_actual = $_SESSION['usuario_id'];
 $datos_usuario = $usuarioModel->obtenerPorId($id_actual);
@@ -286,28 +290,81 @@ $config = [
                         </form>
                     </div>
 
-                    <div class="user-list">
-                        <?php foreach($usuarios as $u): ?>
-                            <div class="user-item">
-                                <div class="user-info">
-                                    <div class="user-avatar">
-                                        <?php echo strtoupper(substr($u['nombre'], 0, 1)); ?>
+                    <div class="user-list-container">
+                        <?php foreach ($usuarios as $u): ?>
+                            <?php 
+                                // Lógica de estado
+                                $es_activo = ($u['estado'] == 1);
+                                $es_protegido = ($u['id'] == 1 || $u['id'] == $id_actual);
+                                
+                                // Clases dinámicas para opacidad si está inactivo
+                                $card_opacity = $es_activo ? '' : 'opacity-dimmed';
+                                $avatar_grayscale = $es_activo ? '' : 'grayscale';
+                                
+                                // Colores de Avatar según rol (opcional, por ahora azul default)
+                                $avatar_bg = 'bg-soft-blue';
+                                $avatar_text = 'text-blue';
+                            ?>
+
+                            <div class="user-card <?php echo $card_opacity; ?>" id="user-row-<?php echo $u['id']; ?>">
+                                <div class="user-card-inner">
+                                    
+                                    <div class="user-profile-section">
+                                        <div class="user-avatar <?php echo $avatar_bg . ' ' . $avatar_text . ' ' . $avatar_grayscale; ?>">
+                                            <?php echo strtoupper(substr($u['nombre'], 0, 1)); ?>
+                                        </div>
+                                        
+                                        <div class="user-details-box">
+                                            <h3 class="user-name <?php echo $es_activo ? '' : 'text-muted'; ?>">
+                                                <?php echo htmlspecialchars($u['nombre']); ?>
+                                            </h3>
+                                            
+                                            <div class="user-email-row">
+                                                <span class="material-symbols-outlined icon-tiny">mail</span>
+                                                <span class="email-text" title="<?php echo htmlspecialchars($u['email']); ?>">
+                                                    <?php echo htmlspecialchars($u['email']); ?>
+                                                </span>
+                                            </div>
+
+                                            <div class="user-role-badge">
+                                                <span class="role-dot"></span>
+                                                <?php echo ucfirst($u['rol']); ?>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="user-details">
-                                        <h4>
-                                            <?php echo htmlspecialchars($u['nombre']); ?>
-                                            <span class="role-badge"><?php echo ucfirst($u['rol']); ?></span>
-                                        </h4>
-                                        <span><?php echo htmlspecialchars($u['email']); ?></span>
-                                    </div>
-                                </div>
-                                <div class="user-actions">
-                                    <button class="btn-icon-soft edit" title="Editar"><span class="material-symbols-outlined">edit</span></button>
-                                    <?php if($u['id'] !== 1 && $u['id'] != $id_actual): ?>
-                                        <button class="btn-icon-soft" title="Eliminar" onclick="confirmDeleteUser(<?php echo $u['id']; ?>)">
-                                            <span class="material-symbols-outlined">delete</span>
+
+                                    <div class="mobile-divider"></div>
+
+                                    <div class="user-actions-section">
+                                        
+                                        <div class="status-control-wrapper">
+                                            <div class="status-label-group <?php echo $es_activo ? 'status-on' : 'status-off'; ?>" id="indicator-<?php echo $u['id']; ?>">
+                                                <span class="status-dot"></span>
+                                                <span class="status-text"><?php echo $es_activo ? 'Activo' : 'Inactivo'; ?></span>
+                                            </div>
+
+                                            <?php if(!$es_protegido): ?>
+                                                <div class="ios-switch">
+                                                    <input type="checkbox" id="toggle-<?php echo $u['id']; ?>" 
+                                                        <?php echo $es_activo ? 'checked' : ''; ?> 
+                                                        onchange="toggleUserStatus(<?php echo $u['id']; ?>, this)">
+                                                    <label for="toggle-<?php echo $u['id']; ?>"></label>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <?php if(!$es_protegido): ?>
+                                            <button class="btn-delete-icon" title="Eliminar" onclick="confirmDeleteUser(<?php echo $u['id']; ?>)">
+                                                <span class="material-symbols-outlined">delete</span>
+                                            </button>
+                                        <?php endif; ?>
+                                        
+                                        <button class="btn-edit-icon" title="Editar" onclick="openEditUser(<?php echo htmlspecialchars(json_encode($u)); ?>)">
+                                            <span class="material-symbols-outlined">edit</span>
                                         </button>
-                                    <?php endif; ?>
+
+                                    </div>
+
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -377,6 +434,66 @@ $config = [
         btnElement.classList.add('active');
         if(window.innerWidth < 1024) window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
+    function toggleUserStatus(userId, checkbox) {
+    // Selectores actualizados a las nuevas clases
+    const container = document.getElementById('indicator-' + userId);
+    const dot = container.querySelector('.status-dot');
+    const text = container.querySelector('.status-text');
+    const card = document.getElementById('user-row-' + userId);
+    const avatar = card.querySelector('.user-avatar');
+    const name = card.querySelector('.user-name');
+
+    // 1. Determinar nuevo estado (1 = Activo, 0 = Inactivo)
+    const newState = checkbox.checked ? 1 : 0;
+    
+    // 2. Actualización Visual ("Tailwind Style")
+    if (checkbox.checked) {
+        // Activar visualmente
+        container.classList.remove('status-off');
+        container.classList.add('status-on');
+        text.textContent = "Activo";
+        
+        // Quitar efectos de inactividad
+        card.classList.remove('opacity-dimmed');
+        avatar.classList.remove('grayscale');
+        name.classList.remove('text-muted');
+    } else {
+        // Desactivar visualmente
+        container.classList.remove('status-on');
+        container.classList.add('status-off');
+        text.textContent = "Inactivo";
+        
+        // Aplicar efectos de inactividad
+        card.classList.add('opacity-dimmed');
+        avatar.classList.add('grayscale');
+        name.classList.add('text-muted');
+    }
+
+    // 3. Petición al Backend (Igual que antes)
+    const formData = new FormData();
+    formData.append('id', userId);
+    formData.append('estado', newState);
+
+    fetch('actions/cambiar_estado_usuario.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            TrojesUI.toast('success', `Usuario ${newState ? 'activado' : 'desactivado'}.`);
+        } else {
+            throw new Error(data.message);
+        }
+    })
+    .catch(error => {
+        // Revertir en caso de error
+        checkbox.checked = !checkbox.checked;
+        // ... (Lógica de reversión visual, puedes copiar el bloque IF/ELSE invertido aquí si deseas perfección)
+        TrojesUI.toast('error', 'Error al guardar cambio.');
+    });
+}
 
     async function confirmDeleteUser(userId) {
         const confirmed = await TrojesUI.confirm({
