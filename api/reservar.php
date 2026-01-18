@@ -1,12 +1,10 @@
 <?php
-// 1. CONFIGURACIÓN DE SEGURIDAD Y CORS
-// Permitir acceso desde cualquier origen (o especificar tu dominio)
+// 1. CONFIGURACIÓN
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
 
-// Manejo de la solicitud preliminar (Preflight) del navegador
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
@@ -15,54 +13,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 include_once '../config/database.php';
 include_once '../models/Boleto.php';
 
-// Obtener los datos enviados (JSON)
+// Obtener datos
 $data = json_decode(file_get_contents("php://input"));
 
-// 2. VALIDACIÓN CORREGIDA
-// Usamos isset() para el numero, porque empty(0) devuelve true y bloqueaba el boleto cero.
+// 2. VALIDACIÓN (Adaptada para array de boletos)
 if(
     isset($data->rifa_id) && 
-    isset($data->numero) && 
+    isset($data->boletos) && is_array($data->boletos) && count($data->boletos) > 0 &&
     !empty($data->nombre) && 
     !empty($data->telefono)
 ) {
     $database = new Database();
     $db = $database->getConnection();
 
-    // Verificación de seguridad por si falla la conexión BD
     if(!$db) {
         http_response_code(500);
-        echo json_encode(["success" => false, "message" => "Error interno de conexión a base de datos."]);
+        echo json_encode(["success" => false, "message" => "Error interno de conexión."]);
         exit;
     }
 
-    $boleto = new Boleto($db);
+    $boletoModel = new Boleto($db);
+    
+    $reservados = [];
+    $errores = [];
+    $primer_error = "";
 
-    // Mapear datos
-    $datos_reserva = [
-        'rifa_id' => $data->rifa_id,
-        'numero' => $data->numero,
-        'nombre' => $data->nombre,
-        'telefono' => $data->telefono,
-        'estado' => $data->estado ?? 'No especificado'
-    ];
+    // 3. PROCESAMIENTO MÚLTIPLE
+    // Recorremos el array de boletos para reservar uno por uno
+    foreach ($data->boletos as $numero) {
+        
+        $datos_reserva = [
+            'rifa_id'  => $data->rifa_id,
+            'numero'   => $numero,
+            'nombre'   => $data->nombre,
+            'telefono' => $data->telefono,
+            'estado'   => $data->estado ?? 'No especificado',
+            // Pasamos el array completo solo para referencia en notificaciones (opcional)
+            'boletos'  => $data->boletos 
+        ];
 
-    // Intentar reservar
-    $resultado = $boleto->reservar($datos_reserva);
+        // Llamada al Modelo
+        $resultado = $boletoModel->reservar($datos_reserva);
 
-    if($resultado['success']) {
-        // Éxito real
-        http_response_code(200);
-        echo json_encode($resultado);
-    } else {
-        // Fallo de negocio (ej. ya estaba ocupado)
-        // Enviamos 200 OK para que el JS lea el mensaje de error dentro del JSON
-        http_response_code(200); 
-        echo json_encode($resultado);
+        if($resultado['success']) {
+            $reservados[] = $numero;
+        } else {
+            $errores[] = "Boleto $numero: " . $resultado['message'];
+            if(empty($primer_error)) $primer_error = $resultado['message'];
+        }
     }
+
+    // 4. RESPUESTA AL FRONTEND
+    // Si al menos se reservó uno, consideramos éxito parcial/total para que el JS limpie
+    if (count($reservados) > 0) {
+        http_response_code(200);
+        echo json_encode([
+            "success" => true,
+            "message" => "Proceso finalizado.",
+            "reservados" => $reservados,
+            "errores" => $errores
+        ]);
+    } else {
+        // Si fallaron todos (ej: ya ganados), devolvemos error
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "message" => $primer_error ?: "No se pudieron reservar los boletos seleccionados."
+        ]);
+    }
+
 } else {
-    // Datos faltantes
+    // Respuesta de error por validación
     http_response_code(400);
-    echo json_encode(["success" => false, "message" => "Datos incompletos. Faltan campos obligatorios."]);
+    echo json_encode([
+        "success" => false, 
+        "message" => "Datos incompletos. Faltan campos obligatorios."
+    ]);
 }
 ?>
