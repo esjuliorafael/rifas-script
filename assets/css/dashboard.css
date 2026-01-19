@@ -482,26 +482,13 @@ body {
     background-color: var(--primary-bg);
 }
 
-.user-avatar {
-    width: 2.5rem;
-    height: 2.5rem;
-    background-color: #e5e7eb;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 0.875rem;
-    color: var(--text-gray);
-}
-
 .user-info {
     flex: 1;
     overflow: hidden; /* Para que funcione el truncate */
 }
 
-.user-info .name {
-    font-size: 0.875rem;
+.user-info .user-name {
+    font-size: 0.75rem;
     font-weight: 700;
     color: var(--text-dark);
     white-space: nowrap;
@@ -509,9 +496,9 @@ body {
     text-overflow: ellipsis;
 }
 
-.user-info .email {
-    font-size: 0.75rem;
-    color: var(--text-light);
+.user-info .user-role {
+    font-size: 1em;
+    color: var(--text-dark);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -938,7 +925,7 @@ body {
 /* Avatar */
 .user-avatar {
     width: 3rem; height: 3rem; /* h-12 w-12 */
-    border-radius: 9999px;     /* rounded-full */
+    border-radius: 50%;     /* rounded-full */
     display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: 1rem;
     flex-shrink: 0;
@@ -2712,3 +2699,64 @@ body {
     color: var(--text-gray);
     display: block;
 }
+
+/* =========================================
+   COMPONENTES: ALERTAS PROFESIONALES
+   ========================================= */
+
+.info-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+    background-color: #eff6ff; /* Azul muy suave (Blue-50) */
+    border: 1px solid #dbeafe; /* Borde sutil (Blue-100) */
+    border-radius: 0.75rem;
+    margin-top: 1.5rem;
+    transition: all 0.2s ease;
+}
+
+/* Icono */
+.info-box-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-blue);
+    flex-shrink: 0;
+}
+
+.info-box-icon .material-symbols-outlined {
+    font-size: 1.5rem;
+}
+
+/* Contenido */
+.info-box-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.info-box-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e3a8a; /* Azul oscuro corporativo (Blue-900) */
+    line-height: 1.4;
+    margin-bottom: 0.25rem;
+}
+
+.info-box-text {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #1e40af; /* Azul medio legible (Blue-800) */
+    line-height: 1.5;
+}
+
+/* Variante de Bloqueo (Lock) */
+.info-box.access-lock {
+    background-color: #f8fafc; /* Slate-50 */
+    border-color: #e2e8f0;     /* Slate-200 */
+}
+
+.info-box.access-lock .info-box-title { color: #334155; }
+.info-box.access-lock .info-box-text { color: #64748b; }
+.info-box.access-lock .info-box-icon { color: #94a3b8; }

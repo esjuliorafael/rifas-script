@@ -25,12 +25,17 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     if($usuario->login()) {
         // ÉXITO: Guardamos sesión y entramos
         $_SESSION['usuario_id'] = $usuario->id;
-        $_SESSION['usuario_nombre'] = $usuario->usuario;
+        
+        // CORRECCIÓN 1: Guardar el NOMBRE REAL (Ej: "Rafael") no el email
+        $_SESSION['usuario_nombre'] = $usuario->nombre; 
+        
+        // CORRECCIÓN 2: Guardar el ROL (Necesario para el Sidebar)
+        $_SESSION['usuario_rol'] = $usuario->rol;
+
         header("Location: index.php");
         exit;
     } else {
-        // ERROR: Redirigimos a la página de error personalizada
-        // Enviamos el email por URL para que el usuario no tenga que volver a escribirlo
+        // ERROR: Redirigimos a la página de error
         $email_safe = urlencode($_POST['email']);
         header("Location: error.php?email=" . $email_safe);
         exit;

@@ -54,7 +54,7 @@ $pagina_actual = basename($_SERVER['PHP_SELF']);
                 <button class="mobile-toggle-btn" id="mobileMenuTrigger">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                <span class="mobile-brand">Panel Admin</span>
+                <span class="mobile-brand">Rifas Las Trojes</span>
                 <div class="mobile-avatar-mini">
                     <?php echo strtoupper(substr($_SESSION['usuario_nombre'] ?? 'A', 0, 1)); ?>
                 </div>

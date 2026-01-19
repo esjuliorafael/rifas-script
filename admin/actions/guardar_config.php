@@ -11,9 +11,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $database = new Database();
     $db = $database->getConnection();
-    $configModel = new Configuracion($db);
+    
+    // --- NUEVO: VERIFICACIÓN DE ROL ---
+    $usuarioModel = new Usuario($db);
+    $datos_user = $usuarioModel->obtenerPorId($_SESSION['usuario_id']);
+    $es_staff = ($datos_user['rol'] === 'staff');
 
-    // --- PROCESAMIENTO SEGÚN TIPO DE FORMULARIO ---
+    // BLINDAJE: Si es Staff y trata de guardar algo prohibido -> Error
+    // Incluimos 'apartado' aquí porque aunque lo pueden ver, es Read-Only, no deberían poder guardarlo.
+    if ($es_staff && in_array($tipo, ['pago', 'whatsapp', 'apartado'])) {
+        header("Location: ../configuracion.php?error=no_permitido");
+        exit;
+    }
+    // ----------------------------------
+
+    $configModel = new Configuracion($db);
 
     // 1. MÉTODOS DE PAGO
     if ($tipo === 'pago') {
@@ -37,7 +49,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($tipo === 'apartado') {
         $configModel->guardar('tiempo_limite', $_POST['tiempo_limite']);
         
-        // Checkbox: si no viene es 0, si viene es 1
         $estado_sistema = isset($_POST['sistema_apartado']) ? '1' : '0';
         $configModel->guardar('sistema_apartado', $estado_sistema);
         
@@ -47,18 +58,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 4. NOTIFICACIONES
     if ($tipo === 'notificaciones') {
-        // A) Preferencia del Usuario (Toggle + Email Alternativo)
-        $usuarioModel = new Usuario($db);
+        // A) Preferencia del Usuario (Todos pueden cambiar su propia preferencia)
         $activar = isset($_POST['notif_active']); 
-        
-        // Capturar el email que el usuario escribió en el input
         $email_custom = isset($_POST['email_aviso']) ? $_POST['email_aviso'] : '';
 
-        // Guardar ambos datos
         $usuarioModel->actualizarPreferencias($_SESSION['usuario_id'], $activar, $email_custom);
 
-        // B) Configuración del Sistema (Remitente)
-        if (isset($_POST['email_remitente'])) {
+        // B) Configuración del Sistema (Remitente) - BLOQUEO ADICIONAL PARA STAFF
+        // El staff puede guardar su preferencia, pero NO cambiar el email del sistema.
+        if (!$es_staff && isset($_POST['email_remitente'])) {
             $configModel->guardar('email_remitente', $_POST['email_remitente']);
         }
         
@@ -66,7 +74,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Default
     header("Location: ../configuracion.php");
     exit;
 }

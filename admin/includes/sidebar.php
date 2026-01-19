@@ -3,7 +3,7 @@
         <div class="brand-logo">
             <span class="material-symbols-outlined">confirmation_number</span>
         </div>
-        <h1 class="brand-name">Rifas Admin</h1>
+        <h1 class="brand-name">Rifas Las Trojes</h1>
     </div>
 
     <nav class="sidebar-menu">
@@ -52,13 +52,22 @@
 
     <div class="sidebar-footer">
         <div class="user-profile">
-            <div class="user-avatar bg-blue">
-                <?php echo strtoupper(substr($_SESSION['usuario_nombre'] ?? 'A', 0, 2)); ?>
+            <div class="user-avatar bg-soft-blue text-blue">
+                <?php echo strtoupper(substr($_SESSION['usuario_nombre'] ?? 'A', 0, 1)); ?>
             </div>
+            
             <div class="user-info">
-                <p class="name"><?php echo $_SESSION['usuario_nombre'] ?? 'Admin'; ?></p>
-                <p class=\"email\">Administrador</p>
+                <p class="user-name"><?php echo htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Usuario'); ?></p>
+                
+                <p class="user-role">
+                    <?php 
+                        // Intentamos obtener el rol de la sesión o de la variable local
+                        $rol_label = $_SESSION['usuario_rol'] ?? ($datos_usuario['rol'] ?? 'Staff');
+                        echo ucfirst($rol_label); 
+                    ?>
+                </p>
             </div>
+            
             <a href="logout.php" class="btn-logout" title="Cerrar Sesión">
                 <span class="material-symbols-outlined">logout</span>
             </a>
