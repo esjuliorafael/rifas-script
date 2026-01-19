@@ -142,17 +142,22 @@ $config = [
                     </div>
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="apartado">
-
-                        <div class="toggle-wrapper">
+                        
+                        <label class="toggle-wrapper" for="sistema_apartado">
+                            
                             <div class="toggle-info">
                                 <h4>Sistema de Apartado</h4>
-                                <span>Liberar boletos impagos automáticamente</span>
+                                <span>Liberar boletos impagos automáticamente.</span>
                             </div>
-                            <label class="switch">
-                                <input type="checkbox" name="sistema_apartado" <?php echo $config['sistema_apartado'] ? 'checked' : ''; ?>>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
+
+                            <div class="switch">
+                                <input type="hidden" name="sistema_apartado" value="0"> 
+                                <input type="checkbox" id="sistema_apartado" name="sistema_apartado" value="1" 
+                                    <?php echo ($config['sistema_apartado'] == '1') ? 'checked' : ''; ?>>
+                                <span class="slider round"></span>
+                            </div>
+
+                        </label>
 
                         <div class="field-group">
                             <label class="field-label">Tiempo Límite (Horas)</label>
@@ -217,17 +222,21 @@ $config = [
                     </div>
                     <form action="actions/guardar_config.php" method="POST" class="form-grid">
                         <input type="hidden" name="tipo" value="notificaciones">
-
-                        <div class="toggle-wrapper">
+                        
+                        <label class="toggle-wrapper" for="notif_active">
+                            
                             <div class="toggle-info">
                                 <h4>Activar Notificaciones</h4>
-                                <span>Enviar correos automáticos a mí</span>
+                                <span>Enviar correos automáticos a mí.</span>
                             </div>
-                            <label class="switch">
-                                <input type="checkbox" name="notif_active" <?php echo $config['notificaciones_activas'] ? 'checked' : ''; ?>>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
+
+                            <div class="switch">
+                                <input type="checkbox" id="notif_active" name="notif_active" value="1" 
+                                    <?php echo ($datos_usuario['recibir_avisos'] == 1) ? 'checked' : ''; ?>>
+                                <span class="slider round"></span>
+                            </div>
+
+                        </label>
 
                         <div class="field-group">
                             <label class="field-label">Correo Destino (Mi Usuario)</label>
@@ -264,7 +273,7 @@ $config = [
                                 <span class="material-symbols-outlined">group</span>
                             </div>
                             <div class="header-text">
-                                <h3>Gestión de Equipo</h3>
+                                <h3>Gestión de Accesos</h3>
                                 <p>Administra quién tiene acceso al panel.</p>
                             </div>
                         </div>

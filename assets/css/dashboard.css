@@ -622,7 +622,7 @@ body {
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    overflow-x: hidden;
+    overflow: hidden;
     box-sizing: border-box;
 }
 
@@ -650,7 +650,7 @@ body {
 .panel-header {
     display: flex;
     gap: 1rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     padding-bottom: 1.5rem;
     border-bottom: 1px dashed var(--border-light);
 }
@@ -777,49 +777,110 @@ body {
     pointer-events: none;
 }
 
-/* Toggles (Switches) */
+/* =========================================
+   COMPONENTES: TOGGLES Y SWITCHES (Mobile First)
+   ========================================= */
+
+/* Contenedor Principal (Tarjeta del Toggle) */
 .toggle-wrapper {
     display: flex;
-    align-items: center;
+    align-items: center;       /* Centrado vertical */
     justify-content: space-between;
-    padding: 1rem;
-    background: #f9fafb;
-    border-radius: 0.75rem;
+    gap: 1rem;                 /* Espacio seguro entre texto y switch */
+    
+    background-color: white;
     border: 1px solid var(--border-light);
+    border-radius: 0.75rem;    /* rounded-xl */
+    padding: 1rem;             /* Zona táctil amplia */
+    
+    cursor: pointer;           /* Indica interactividad */
+    transition: all 0.2s ease;
+    width: 100%;
+    box-shadow: var(--shadow-sm);
 }
 
+.toggle-wrapper:hover {
+    background-color: #f9fafb; /* bg-gray-50 */
+    border-color: #bfdbfe;     /* borde azul suave al hover */
+}
+
+/* Área de Texto (Izquierda) */
+.toggle-info {
+    flex: 1;          /* Ocupar todo el espacio disponible */
+    min-width: 0;     /* CRÍTICO: Permite que el texto se ajuste y no empuje */
+    display: flex;
+    flex-direction: column;
+}
+
+.toggle-info h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    line-height: 1.3;
+}
+
+.toggle-info span {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--text-gray);
+    line-height: 1.4;
+    
+    /* Truncamiento opcional si el texto es excesivo */
+    overflow-wrap: break-word; 
+}
+
+/* El Interruptor (Derecha) */
 .switch {
     position: relative;
     display: inline-block;
-    width: 48px;
-    height: 26px;
+    width: 48px;     /* Ancho fijo */
+    height: 26px;    /* Alto fijo */
+    flex-shrink: 0;  /* CRÍTICO: Jamás permitir que se aplaste */
 }
 
-.switch input { opacity: 0; width: 0; height: 0; }
+/* Checkbox oculto */
+.switch input { 
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
 
+/* El deslizador (Slider) */
 .slider {
     position: absolute;
     cursor: pointer;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #ccc;
+    background-color: #e5e7eb; /* Gris inactivo */
     transition: .4s;
     border-radius: 34px;
+    border: 1px solid #d1d5db; /* Borde sutil */
 }
 
+/* La bolita del slider */
 .slider:before {
     position: absolute;
     content: "";
     height: 18px;
     width: 18px;
-    left: 4px;
-    bottom: 4px;
+    left: 3px;
+    bottom: 3px;     /* Centrado visualmente */
     background-color: white;
     transition: .4s;
     border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
-input:checked + .slider { background-color: var(--primary-blue); }
-input:checked + .slider:before { transform: translateX(22px); }
+/* Estado Activo (Checked) */
+.switch input:checked + .slider {
+    background-color: var(--primary-blue);
+    border-color: var(--primary-blue);
+}
+
+.switch input:checked + .slider:before {
+    transform: translateX(22px); /* Mover a la derecha */
+}
 
 /* =========================================
    DISEÑO TARJETA USUARIO (Estilo Moderno/Tailwind)
@@ -2650,47 +2711,4 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-size: 0.8rem;
     color: var(--text-gray);
     display: block;
-}
-
-/* Sub-paneles destacados (ej: Agregar Usuario) */
-.sub-panel {
-    background: #f9fafb;
-    padding: 1.5rem;
-    border-radius: 0.75rem;
-    border: 1px dashed var(--border-light);
-    margin-bottom: 2rem;
-}
-
-.sub-panel-title {
-    margin: 0 0 1rem 0;
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--text-dark);
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-}
-
-/* Grid para formularios en línea (Nombre | Email | Rol | Botón) */
-.form-inline-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 1rem;
-    align-items: end;
-}
-
-/* Botón con altura forzada para alinearse con inputs */
-.btn-tall {
-    height: 46px; /* Coincide con la altura estándar de inputs + padding */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 1.5rem;
-}
-
-/* Responsive para el formulario inline */
-@media (max-width: 768px) {
-    .form-inline-grid {
-        grid-template-columns: 1fr; /* Colapsar a una columna en móvil */
-        align-items: stretch;
-    }
 }
