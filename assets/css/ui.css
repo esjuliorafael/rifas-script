@@ -100,3 +100,78 @@
 /* Animaciones */
 @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
 @keyframes slideOut { to { opacity: 0; transform: translateX(100%); } }
+
+/* =========================================
+   3. SISTEMA DE MODAL CON FORMULARIO
+   ========================================= */
+
+.ui-modal-panel {
+    background: white;
+    width: 95%;
+    max-width: 500px; /* Un poco más ancho que el confirm */
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh; /* Evitar que se salga en móviles */
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ui-modal-overlay.active .ui-modal-panel {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Header del Modal */
+.ui-modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #f3f4f6;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.ui-modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.ui-modal-header p {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.btn-close-modal {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 50%;
+    transition: 0.2s;
+    display: flex;
+}
+.btn-close-modal:hover { background: #f3f4f6; color: #4b5563; }
+
+/* Cuerpo (Scrollable) */
+.ui-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+/* Footer (Acciones) */
+.ui-modal-footer {
+    padding: 1.25rem 1.5rem;
+    background-color: #f9fafb;
+    border-top: 1px solid #f3f4f6;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}

@@ -626,12 +626,6 @@ body {
     box-sizing: border-box;
 }
 
-@media (max-width: 768px) {
-    .config-content {
-        padding: 1rem;
-    }
-}
-
 .config-panel {
     display: none; /* Ocultos por defecto */
     animation: fadeIn 0.3s ease;
@@ -673,6 +667,21 @@ body {
     flex-shrink: 0;
 }
 
+.header-stackable {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
 /* Colores de Iconos */
 .bg-blue { background: var(--primary-blue); }
 .bg-indigo { background: #6366f1; }
@@ -683,6 +692,47 @@ body {
 
 .header-text h3 { margin: 0; font-size: 1.125rem; font-weight: 800; color: var(--text-dark); }
 .header-text p { margin: 0.25rem 0 0 0; font-size: 0.875rem; color: var(--text-gray); }
+
+/* Botón Oscuro (Estilo Ticket) */
+.btn-dark {
+    background-color: var(--text-dark);
+    color: white;
+    border: none;
+    border-radius: 0.75rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+}
+.btn-dark:hover { background-color: #374151; transform: translateY(-1px); }
+.btn-dark:active { transform: scale(0.98); }
+
+/* Móvil */
+@media (max-width: 512px) {
+    .panel-header {
+        align-items: center;
+        flex-direction: column;
+        justify-content: center;
+        text-align: center;
+    }
+    .header-stackable {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    .header-left {
+        flex-direction: column;
+        justify-content: center;
+    }
+    .btn-dark { width: 100%; }
+}
 
 /* --- FORMULARIOS Y CAMPOS --- */
 .form-grid {
@@ -1676,6 +1726,28 @@ input:checked + .slider:before { transform: translateX(22px); }
 .btn-primary:active {
     transform: translateY(0);
     background-color: #1e40af;
+}
+
+/* Botón Base (Blanco con Borde) */
+.btn-secondary {
+    background-color: white;
+    border: 1px solid var(--border-light);
+    color: var(--text-gray);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    font-size: 1em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #f9fafb; /* Gris muy claro al hover por defecto */
+    border-color: #d1d5db;
 }
 
 /* Clase especial de Brillo (Glow) que usamos en el Header */

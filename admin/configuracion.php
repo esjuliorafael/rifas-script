@@ -258,38 +258,22 @@ $config = [
 
             <div id="panel-users" class="config-panel">
                 <div class="panel-card">
-                    <div class="panel-header">
-                        <div class="header-icon bg-blue">
-                            <span class="material-symbols-outlined">group</span>
+                    <div class="panel-header header-stackable">
+                        <div class="header-left">
+                            <div class="header-icon bg-blue">
+                                <span class="material-symbols-outlined">group</span>
+                            </div>
+                            <div class="header-text">
+                                <h3>Gestión de Equipo</h3>
+                                <p>Administra quién tiene acceso al panel.</p>
+                            </div>
                         </div>
-                        <div class="header-text">
-                            <h3>Gestión de Accesos</h3>
-                            <p>Administra quién puede entrar al panel de control.</p>
-                        </div>
+                        <button class="btn-dark" onclick="abrirModalCrearUsuario()">
+                            <span class="material-symbols-outlined">add</span>
+                            Nuevo Usuario
+                        </button>
                     </div>
                     
-                    <div class="sub-panel">
-                        <h4 class="sub-panel-title">Agregar Nuevo Usuario</h4>
-                        <form action="actions/crear_usuario.php" method="POST" class="form-inline-grid">
-                            <div class="field-group">
-                                <label class="field-label">Nombre</label>
-                                <input type="text" name="new_name" class="input-field" placeholder="Nombre completo" required>
-                            </div>
-                            <div class="field-group">
-                                <label class="field-label">Correo</label>
-                                <input type="email" name="new_email" class="input-field" placeholder="correo@ejemplo.com" required>
-                            </div>
-                            <div class="field-group">
-                                <label class="field-label">Rol</label>
-                                <select name="new_role" class="input-field">
-                                    <option value="admin">Administrador</option>
-                                    <option value="staff">Staff</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn-primary btn-tall"><span class="material-symbols-outlined">add</span></button>
-                        </form>
-                    </div>
-
                     <div class="user-list-container">
                         <?php foreach ($usuarios as $u): ?>
                             <?php 
@@ -416,6 +400,39 @@ $config = [
     </div>
 </section>
 
+<template id="template-crear-usuario">
+    <form id="formCrearUsuario">
+        
+        <div class="form-group">
+            <label class="field-label">Nombre Completo</label>
+            <div class="input-wrapper">
+                <span class="material-symbols-outlined input-icon">person</span>
+                <input type="text" name="new_name" class="input-field pl-icon" placeholder="Ej. Juan Pérez" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="field-label">Correo Electrónico</label>
+            <div class="input-wrapper">
+                <span class="material-symbols-outlined input-icon">mail</span>
+                <input type="email" name="new_email" class="input-field pl-icon" placeholder="correo@ejemplo.com" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="field-label">Nivel de Acceso</label>
+            <div class="input-wrapper form-select-wrapper">
+                <span class="material-symbols-outlined input-icon">shield_person</span>
+                <select name="new_role" class="input-field pl-icon">
+                    <option value="admin">Administrador Total</option>
+                    <option value="staff">Staff (Ventas y Soporte)</option>
+                </select>
+            </div>
+        </div>
+
+    </form>
+</template>
+
 <script>
     // Recuperar y activar la pestaña guardada
     document.addEventListener('DOMContentLoaded', () => {
@@ -494,6 +511,45 @@ $config = [
         TrojesUI.toast('error', 'Error al guardar cambio.');
     });
 }
+
+    function abrirModalCrearUsuario() {
+        TrojesUI.formModal.open('template-crear-usuario', {
+            title: 'Registrar Nuevo Miembro',
+            subtitle: 'Ingresa los datos para dar de alta un acceso.',
+            btnText: 'Crear Usuario',
+            onConfirm: async (formData) => {
+                
+                // 1. Preparar datos para enviar
+                const datos = new URLSearchParams();
+                datos.append('new_name', formData.new_name);
+                datos.append('new_email', formData.new_email);
+                datos.append('new_role', formData.new_role);
+
+                // 2. Petición AJAX al backend modificado
+                const response = await fetch('actions/crear_usuario.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: datos
+                });
+
+                // 3. Procesar respuesta JSON
+                // Intentamos parsear incluso si hay error 400/500 para ver el mensaje
+                const result = await response.json().catch(() => ({ 
+                    success: false, 
+                    message: "Error de comunicación con el servidor." 
+                }));
+
+                if (result.success) {
+                    TrojesUI.toast('success', result.message);
+                    // Recargar para ver el nuevo usuario en la lista
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    // Lanzar error para que el Modal lo capture y muestre el Toast de error
+                    throw new Error(result.message);
+                }
+            }
+        });
+    }
 
     async function confirmDeleteUser(userId) {
         const confirmed = await TrojesUI.confirm({

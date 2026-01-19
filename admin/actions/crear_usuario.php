@@ -1,47 +1,75 @@
 <?php
+// admin/actions/crear_usuario.php
 session_start();
-// Verificar sesión
-if (!isset($_SESSION['usuario_id'])) { header("Location: ../login.php"); exit; }
+
+// 1. Configurar encabezado para respuesta JSON
+header('Content-Type: application/json');
+
+// 2. Verificar sesión
+if (!isset($_SESSION['usuario_id'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Sesión expirada. Inicia sesión nuevamente.']);
+    exit;
+}
 
 include_once '../../config/database.php';
 include_once '../../models/Usuario.php';
 
+// 3. Verificar método
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $database = new Database();
-    $db = $database->getConnection();
-    $usuarioModel = new Usuario($db);
+    try {
+        $database = new Database();
+        $db = $database->getConnection();
+        $usuarioModel = new Usuario($db);
 
-    // Sanitización básica
-    $nombre = htmlspecialchars(strip_tags($_POST['new_name']));
-    $email = filter_var($_POST['new_email'], FILTER_SANITIZE_EMAIL);
-    $rol = $_POST['new_role'];
+        // 4. Sanitización
+        $nombre = htmlspecialchars(strip_tags($_POST['new_name'] ?? ''));
+        $email = filter_var($_POST['new_email'] ?? '', FILTER_SANITIZE_EMAIL);
+        $rol = $_POST['new_role'] ?? 'staff';
 
-    // Validación
-    if(!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $_SESSION['mensaje'] = "El correo electrónico no es válido.";
-        $_SESSION['tipo_mensaje'] = "danger";
-        header("Location: ../configuracion.php");
-        exit;
+        // 5. Validaciones
+        if (empty($nombre) || empty($email)) {
+            echo json_encode(['success' => false, 'message' => 'Todos los campos son obligatorios.']);
+            exit;
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            echo json_encode(['success' => false, 'message' => 'El formato del correo electrónico no es válido.']);
+            exit;
+        }
+
+        // 6. Preparar datos
+        $datos = [
+            'nombre' => $nombre,
+            'email' => $email,
+            'password' => '12345678', // Contraseña temporal por defecto
+            'rol' => $rol
+        ];
+
+        // 7. Ejecutar creación
+        $resultado = $usuarioModel->crearUsuario($datos);
+
+        if ($resultado['success']) {
+            // ÉXITO
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Usuario creado correctamente. Contraseña temporal: 12345678'
+            ]);
+        } else {
+            // ERROR DE LÓGICA (Ej. Email duplicado)
+            echo json_encode([
+                'success' => false, 
+                'message' => $resultado['message'] ?? 'Error al registrar el usuario.'
+            ]);
+        }
+
+    } catch (Exception $e) {
+        // ERROR DE SISTEMA
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Error del servidor: ' . $e->getMessage()]);
     }
-
-    $datos = [
-        'nombre' => $nombre,
-        'email' => $email,
-        'password' => '12345678', // Contraseña temporal
-        'rol' => $rol
-    ];
-
-    $resultado = $usuarioModel->crearUsuario($datos);
-
-    if ($resultado['success']) {
-        $_SESSION['mensaje'] = "Usuario creado correctamente. Contraseña temporal: 12345678";
-        $_SESSION['tipo_mensaje'] = "success";
-    } else {
-        $_SESSION['mensaje'] = "Error: " . $resultado['message'];
-        $_SESSION['tipo_mensaje'] = "danger";
-    }
-
-    header("Location: ../configuracion.php");
-    exit;
+} else {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Método no permitido']);
 }
 ?>
