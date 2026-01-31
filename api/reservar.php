@@ -48,7 +48,7 @@ if(
             'nombre'   => $data->nombre,
             'telefono' => $data->telefono,
             'estado'   => $data->estado ?? 'No especificado',
-            // Pasamos el array completo solo para referencia en notificaciones (opcional)
+            // Pasamos el array completo solo para referencia, pero YA NO se usa para notificar desde el modelo
             'boletos'  => $data->boletos 
         ];
 
@@ -64,8 +64,27 @@ if(
     }
 
     // 4. RESPUESTA AL FRONTEND
-    // Si al menos se reservó uno, consideramos éxito parcial/total para que el JS limpie
+    // Si al menos se reservó uno, consideramos éxito parcial/total
     if (count($reservados) > 0) {
+        
+        // --- NUEVA LÓGICA DE NOTIFICACIÓN ---
+        // Preparamos los datos ÚNICAMENTE con los boletos que SÍ se reservaron
+        try {
+            $datos_notificacion = [
+                'rifa_id'  => $data->rifa_id,
+                'nombre'   => $data->nombre,
+                'telefono' => $data->telefono,
+                'boletos'  => $reservados,  // Lista limpia
+                'numero'   => $reservados[0] // Dato de referencia para lógica interna
+            ];
+            
+            // Enviamos un único correo consolidado
+            $boletoModel->notificarVentaNueva($datos_notificacion);
+        } catch (Exception $e) {
+            // Error silencioso para no romper la respuesta al cliente
+        }
+        // -------------------------------------
+
         http_response_code(200);
         echo json_encode([
             "success" => true,

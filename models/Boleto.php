@@ -84,15 +84,17 @@ class Boleto {
             if($stmt->execute()) {
                 $this->conn->commit();
                 
-                // Notificar sin detener el flujo si falla el correo
+                // --- CAMBIO IMPORTANTE ---
+                // Se comenta el envío de notificación aquí para evitar duplicidad y errores de datos.
+                // La notificación ahora se maneja en el controlador (api/reservar.php)
+                /*
                 try {
-                    // Calcular cantidad para el asunto del correo
                     $cantidad = is_array($datos['boletos'] ?? null) ? count($datos['boletos']) : 1;
                     $datos['total'] = $this->calcularTotal($datos['rifa_id'], $cantidad);
                     $this->notificarVentaNueva($datos);
-                } catch (Exception $e) {
-                    // Log silencioso o ignorar
-                }
+                } catch (Exception $e) { }
+                */
+                // -------------------------
 
                 return ['success' => true, 'message' => 'Boleto apartado exitosamente.'];
             } else {
@@ -107,7 +109,7 @@ class Boleto {
     }
 
     // ==========================================
-    // 3. MÉTODOS DE LECTURA (RESTAURADOS)
+    // 3. MÉTODOS DE LECTURA
     // ==========================================
 
     public function obtenerVentas($filtros = [], $limit = 20, $offset = 0) {
@@ -237,7 +239,7 @@ class Boleto {
         $remitente = $configModel->obtener('email_remitente');
         if(empty($remitente)) $remitente = 'notificaciones@rancholastrojes.com.mx';
 
-        // 2. Destinatarios Dinámicos (Usuarios con alertas)
+        // 2. Destinatarios Dinámicos
         $query = "SELECT email, email_alternativo, nombre FROM usuarios WHERE recibir_avisos = 1 AND estado = 1";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
@@ -261,7 +263,7 @@ class Boleto {
         $total = isset($datos_venta['total']) ? "$" . number_format($datos_venta['total'], 2) : 'Pendiente';
         $asunto = "Nueva Venta: " . $cliente . " (" . $cantidad . " boletos)";
         
-        // 4. Plantilla HTML (Diseño Completo)
+        // 4. Plantilla HTML
         $mensaje = "
         <html>
         <body style='font-family: Arial, sans-serif; color: #333; line-height: 1.6; background-color: #f4f4f4; padding: 20px;'>

@@ -39,7 +39,38 @@ $config = [
     'email_remitente' => $sys_conf['email_remitente'] ?? '',
     'notificaciones_activas' => ($datos_usuario && $datos_usuario['recibir_avisos'] == 1),
     'email_aviso' => !empty($datos_usuario['email_alternativo']) ? $datos_usuario['email_alternativo'] : ($datos_usuario['email'] ?? ''),
+    'notificaciones_activas' => ($datos_usuario && $datos_usuario['recibir_avisos'] == 1),
+    'email_aviso' => !empty($datos_usuario['email_alternativo']) ? $datos_usuario['email_alternativo'] : ($datos_usuario['email'] ?? ''),
 ];
+
+$whatsapp_msg_activo = isset($sys_conf['whatsapp_mensaje_activo']) && $sys_conf['whatsapp_mensaje_activo'] == 1;
+$whatsapp_msg_texto = isset($sys_conf['whatsapp_mensaje_texto']) ? $sys_conf['whatsapp_mensaje_texto'] : '';
+
+// Formato base por defecto (Si está vacío en BD)
+if (empty($whatsapp_msg_texto)) {
+    $whatsapp_msg_texto = "¡Hola!
+
+Aparté boletos de la rifa: {titulo_rifa}
+
+Nombre:
+{cliente_nombre}
+
+Boletos apartados:
+{numeros_boletos}
+
+Oportunidades:
+{oportunidades_extra}
+
+Total a pagar:
+{total_calculado}
+
+Realiza tu depósito o transferencia:
+{mensaje_condicional}
+
+{banco_nombre}
+{beneficiario}
+{banco_cuenta}";
+}
 ?>
 
 <section id="view-config" class="view-section active">
@@ -311,6 +342,58 @@ $config = [
 
                             <div class="form-actions mt-large">
                                 <button type="submit" class="btn-primary">Actualizar Número</button>
+                            </div>
+                        </form>
+
+                        <hr style="border:0; border-top:1px solid #eee; margin: 2rem 0;">
+
+                        <form action="actions/guardar_config.php" method="POST" class="form-grid">
+                            <input type="hidden" name="tipo" value="whatsapp_mensaje">
+
+                            <div class="toggle-wrapper">
+                                <div class="toggle-info">
+                                    <h4>Mensaje Automático</h4>
+                                    <span>Si activas esta opción, se abrirá WhatsApp con este mensaje pre-cargado cuando el cliente finalice su apartado.</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" name="whatsapp_mensaje_activo" <?php echo $whatsapp_msg_activo ? 'checked' : ''; ?>>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+
+                            <div class="field-group">
+                                <label class="field-label">Plantilla del Mensaje</label>
+                                <div class="input-wrapper">
+                                    <textarea name="whatsapp_mensaje_texto" class="input-field" 
+                                                style="height: auto; min-height: 300px; padding: 1rem; font-family: monospace; line-height: 1.5; resize: vertical;"
+                                                placeholder="Escribe tu mensaje aquí..."><?php echo htmlspecialchars($whatsapp_msg_texto); ?></textarea>
+                                </div>
+                            </div>
+
+                            <div class="info-box" style="margin-top: 1rem; background-color: #f9fafb; border: 1px solid #e5e7eb;">
+                                <div class="info-box-content">
+                                    <h4 class="info-box-title" style="font-size: 0.9rem; margin-bottom: 0.5rem; color: #4b5563;">
+                                        <span class="material-symbols-outlined" style="font-size: 1rem; vertical-align: middle;">data_object</span>
+                                        Variables Disponibles (Haz clic para copiar)
+                                    </h4>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                        <code style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="navigator.clipboard.writeText('{titulo_rifa}')">{titulo_rifa}</code>
+                                        <code style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="navigator.clipboard.writeText('{cliente_nombre}')">{cliente_nombre}</code>
+                                        <code style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="navigator.clipboard.writeText('{numeros_boletos}')">{numeros_boletos}</code>
+                                        <code style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="navigator.clipboard.writeText('{oportunidades_extra}')">{oportunidades_extra}</code>
+                                        <code style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="navigator.clipboard.writeText('{total_calculado}')">{total_calculado}</code>
+                                        
+                                        <code style="background: #fae8ff; color: #86198f; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="navigator.clipboard.writeText('{banco_nombre}')">{banco_nombre}</code>
+                                        <code style="background: #fae8ff; color: #86198f; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="navigator.clipboard.writeText('{beneficiario}')">{beneficiario}</code>
+                                        <code style="background: #fae8ff; color: #86198f; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="navigator.clipboard.writeText('{banco_cuenta}')">{banco_cuenta}</code>
+                                        
+                                        <code style="background: #ffedd5; color: #9a3412; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="navigator.clipboard.writeText('{mensaje_condicional}')">{mensaje_condicional}</code>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-actions mt-large">
+                                <button type="submit" class="btn-primary">Guardar Configuración</button>
                             </div>
                         </form>
                     </div>

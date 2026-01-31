@@ -12,14 +12,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $database = new Database();
     $db = $database->getConnection();
     
-    // --- NUEVO: VERIFICACIÓN DE ROL ---
+    // --- VERIFICACIÓN DE ROL ---
     $usuarioModel = new Usuario($db);
     $datos_user = $usuarioModel->obtenerPorId($_SESSION['usuario_id']);
     $es_staff = ($datos_user['rol'] === 'staff');
 
     // BLINDAJE: Si es Staff y trata de guardar algo prohibido -> Error
-    // Incluimos 'apartado' aquí porque aunque lo pueden ver, es Read-Only, no deberían poder guardarlo.
-    if ($es_staff && in_array($tipo, ['pago', 'whatsapp', 'apartado'])) {
+    // ACTUALIZADO: Se agrega 'whatsapp_mensaje' a la lista de restricciones
+    if ($es_staff && in_array($tipo, ['pago', 'whatsapp', 'apartado', 'whatsapp_mensaje'])) {
         header("Location: ../configuracion.php?error=no_permitido");
         exit;
     }
@@ -37,13 +37,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // 2. WHATSAPP
+    // 2. WHATSAPP (Número)
     if ($tipo === 'whatsapp') {
         $configModel->guardar('whatsapp_numero', $_POST['whatsapp_numero']);
         
         header("Location: ../configuracion.php?msg=config_ok");
         exit;
     }
+
+    // --- 2.1 NUEVO BLOQUE: MENSAJE PERSONALIZADO WHATSAPP ---
+    if ($tipo === 'whatsapp_mensaje') {
+        // 1. Guardar estado del toggle (1 o 0)
+        // Los checkbox no envían nada si no están marcados, por eso se valida con isset
+        $estado_mensaje = isset($_POST['whatsapp_mensaje_activo']) ? '1' : '0';
+        $configModel->guardar('whatsapp_mensaje_activo', $estado_mensaje);
+
+        // 2. Guardar el contenido del mensaje
+        // Se guarda tal cual para preservar los saltos de línea del textarea
+        $mensaje = isset($_POST['whatsapp_mensaje_texto']) ? $_POST['whatsapp_mensaje_texto'] : '';
+        $configModel->guardar('whatsapp_mensaje_texto', $mensaje);
+
+        header("Location: ../configuracion.php?msg=config_ok");
+        exit;
+    }
+    // --------------------------------------------------------
 
     // 3. TIEMPO DE APARTADO
     if ($tipo === 'apartado') {
