@@ -47,7 +47,7 @@ $rifas = $rifaModel->obtenerTodas();
                     $porcentaje = ($total > 0) ? ($vendidos / $total) * 100 : 0;
                     $estado_clase = ($r['estado'] === 'activa') ? 'status-active' : 'status-ended';
                     // Manejo de imagen
-                    $imagen_url = !empty($r['imagen']) ? "../assets/uploads/" . $r['imagen'] : "../assets/img/placeholder.jpg";
+                    $imagen_url = !empty($r['imagen']) ? "../" . $r['imagen'] : "../assets/img/placeholder.jpg";
                 ?>
 
                 <article class="mobile-rifa-card estado-rifa" data-estado="<?php echo $r['estado']; ?>"> 

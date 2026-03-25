@@ -233,88 +233,205 @@ class Boleto {
     // ==========================================
     
     public function notificarVentaNueva($datos_venta) {
-        // 1. Configuración Dinámica (Remitente)
+        // 1. Configuración y Dependencias
         include_once 'Configuracion.php'; 
         $configModel = new Configuracion($this->conn);
+        
+        // Configuración de Remitente
         $remitente = $configModel->obtener('email_remitente');
-        if(empty($remitente)) $remitente = 'notificaciones@rancholastrojes.com.mx';
+        if(empty($remitente)) $remitente = 'notificaciones@rancholastrojes.com.mx'; // Fallback seguro
 
-        // 2. Destinatarios Dinámicos
-        $query = "SELECT email, email_alternativo, nombre FROM usuarios WHERE recibir_avisos = 1 AND estado = 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        $destinatarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Configuración de Dominio para Imágenes (Proyecto Rifas)
+        $DOMAIN_URL = "https://rifas.rancholastrojes.com.mx/"; 
+        $IMG_PLACEHOLDER = "assets/images/logo.png"; // Ruta relativa del logo como fallback
+
+        // 2. Obtener Destinatarios (Admins)
+        $queryDest = "SELECT email, email_alternativo, nombre FROM usuarios WHERE recibir_avisos = 1 AND estado = 1";
+        $stmtDest = $this->conn->prepare($queryDest);
+        $stmtDest->execute();
+        $destinatarios = $stmtDest->fetchAll(PDO::FETCH_ASSOC);
 
         if(count($destinatarios) === 0) return;
 
-        // 3. Preparar Datos
+        // 3. Obtener Información de la Rifa (Imagen, Título, Precio)
+        // Esto es crucial para no mostrar "Pendiente" y mostrar la foto real
+        $rifa_id = $datos_venta['rifa_id'];
+        $qRifa = "SELECT titulo, imagen, precio_boleto FROM rifas WHERE id = :id LIMIT 1";
+        $stmtRifa = $this->conn->prepare($qRifa);
+        $stmtRifa->execute([':id' => $rifa_id]);
+        $infoRifa = $stmtRifa->fetch(PDO::FETCH_ASSOC);
+
+        // Datos de la Rifa (con fallbacks)
+        $tituloRifa = $infoRifa ? $infoRifa['titulo'] : 'Rifa General';
+        $precioUnitario = $infoRifa ? floatval($infoRifa['precio_boleto']) : 0;
+        
+        // Construcción URL Imagen
+        $img_src = $DOMAIN_URL . $IMG_PLACEHOLDER;
+        if ($infoRifa && !empty($infoRifa['imagen'])) {
+            // La BD tiene: assets/uploads/rifas/portadas/foto.jpg
+            // Concatenamos dominio + ruta
+            $img_src = $DOMAIN_URL . ltrim($infoRifa['imagen'], '/');
+        }
+
+        // 4. Procesar Datos del Participante y Boletos
         $cliente = htmlspecialchars($datos_venta['nombre']);
         $telefono = htmlspecialchars($datos_venta['telefono']);
         
-        $boletos = '';
-        $cantidad = 1;
+        // Normalizar boletos a Array
+        $array_boletos = [];
         if (isset($datos_venta['boletos']) && is_array($datos_venta['boletos'])) {
-            $boletos = implode(', ', $datos_venta['boletos']);
-            $cantidad = count($datos_venta['boletos']);
-        } else {
-            $boletos = $datos_venta['numero'];
+            $array_boletos = $datos_venta['boletos'];
+        } elseif (isset($datos_venta['numero'])) {
+            $array_boletos = [$datos_venta['numero']];
         }
 
-        $total = isset($datos_venta['total']) ? "$" . number_format($datos_venta['total'], 2) : 'Pendiente';
-        $asunto = "Nueva Venta: " . $cliente . " (" . $cantidad . " boletos)";
+        $cantidad = count($array_boletos);
         
-        // 4. Plantilla HTML
+        // Calcular Total Real
+        $totalCalculado = $cantidad * $precioUnitario;
+        $totalFormateado = "$" . number_format($totalCalculado, 2);
+
+        // Generar HTML de Tags de Boletos
+        $boletos_html = "";
+        foreach ($array_boletos as $num) {
+            $boletos_html .= "<span class='ticket-tag'>" . $num . "</span>";
+        }
+
+        $asunto = "Nuevo Apartado: " . $cliente . " (" . $cantidad . " boletos)";
+        
+        // 5. Plantilla HTML (Diseño Unificado)
         $mensaje = "
-        <html>
-        <body style='font-family: Arial, sans-serif; color: #333; line-height: 1.6; background-color: #f4f4f4; padding: 20px;'>
-            <div style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
+        <!DOCTYPE html>
+        <html lang='es'>
+        <head>
+            <meta charset='UTF-8'>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
+                body { margin: 0; padding: 1.25rem 0; background-color: #f3efeb !important; font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
+                .container { max-width: 512px; margin: 0 auto; background-color: #ffffff !important; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
                 
-                <div style='background-color: #2563eb; color: white; padding: 20px; text-align: center;'>
-                    <h2 style='margin:0; font-size: 24px;'>¡Nueva Venta Registrada!</h2>
-                    <p style='margin: 5px 0 0; opacity: 0.9;'>Sistema de Rifas Las Trojes</p>
+                /* Header & Footer */
+                .header { padding: 2.25rem 1.75rem 1.75rem; text-align: center; }
+                .header-logo { width: 100px; height: auto; border-radius: 50%; }
+                .header-subtitle { margin-top: 15px; font-size: 15px; color: #6b7280; }
+                .footer { padding: 20px; border-top: 1px solid #e5e7eb; background-color: #f9fafb; font-size: 12px; color: #9ca3af; text-align: center; }
+                
+                /* Content */
+                .content { padding: 0 40px 40px; color: #4b5563; }
+                .section-title { margin-bottom: 1.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 1rem; color: #1a1a1a; }
+                .lora-italic { font-family: 'Lora', serif; font-weight: 600; font-style: italic; color: #8b5e3c; }
+                
+                /* Data Rows */
+                .data-row { margin-bottom: 1rem; }
+                .label { display: block; margin-bottom: 0.25rem; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; }
+                .value { font-weight: 500; font-size: 1rem; color: #1f2937; }
+                
+                /* Raffle Item Table */
+                .item-table { width: 100%; border-collapse: collapse; border: 0; margin-bottom: 12px; border-bottom: 1px solid #f3f4f6; padding-bottom: 12px; }
+                .item-img { display: block; border-radius: 8px; object-fit: cover; border: 1px solid #e5e7eb; background-color: #ffffff; }
+                .item-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 700; color: #1a1a1a; line-height: 1.2; margin-bottom: 4px; }
+                .item-meta { font-family: monospace; font-size: 13px; color: #6b7280; }
+
+                /* Tickets Tags Container */
+                .tickets-container { margin-bottom: 2rem; }
+                .ticket-tag { 
+                    display: inline-block; 
+                    padding: 4px 8px; 
+                    margin: 0 4px 4px 0; 
+                    border-radius: 8px; 
+                    font-family: monospace; 
+                    font-size: 12px; 
+                    font-weight: 600; 
+                    color: #ffffff; 
+                    background-color: #8b5e3c; 
+                    text-decoration: none;
+                }
+                
+                /* Totals Box */
+                .total-box { margin-top: 1rem; padding: 1.25rem; background-color: #f9f7f5 !important; border-radius: 0.75rem; }
+                .table-totals { width: 100%; border-collapse: collapse; border: 0; }
+                .td-total-label { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+                .td-total-value { font-size: 18px; font-weight: 700; color: #1a1a1a; text-align: right; }
+
+                /* Button */
+                .btn-wrapper { text-align: center; margin-top: 20px; }
+                .btn-admin { display: inline-block; padding: 12px 24px; background-color: #1a1a1a; border-radius: 8px; color: #ffffff; font-weight: 600; font-size: 14px; text-decoration: none; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <img src='{$DOMAIN_URL}assets/images/logo.png' alt='Rancho Las Trojes' class='header-logo'>
+                    <p class='header-subtitle'>Nuevo apartado de boletos registrado</p>
                 </div>
-                
-                <div style='padding: 30px;'>
-                    <p style='margin-bottom: 20px; font-size: 16px;'>Se ha registrado un nuevo apartado de boletos. Aquí están los detalles:</p>
+
+                <div class='content'>
                     
-                    <table style='width: 100%; border-collapse: collapse; background-color: #f9fafb; border-radius: 8px; overflow: hidden;'>
+                    <div class='section-title'>
+                        Datos <span class='lora-italic'>del Participante</span>
+                    </div>
+                    
+                    <div class='data-row'>
+                        <span class='label'>Nombre</span>
+                        <div class='value'>{$cliente}</div>
+                    </div>
+                    <div class='data-row'>
+                        <span class='label'>Teléfono</span>
+                        <div class='value'>{$telefono}</div>
+                    </div>
+
+                    <div class='section-title' style='margin-top: 40px;'>
+                        Detalle <span class='lora-italic'>del Apartado</span>
+                    </div>
+                    
+                    <table class='item-table' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; color: #666;'><strong>Cliente:</strong></td>
-                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; font-weight: 500;'>{$cliente}</td>
-                        </tr>
-                        <tr>
-                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; color: #666;'><strong>Teléfono:</strong></td>
-                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; font-weight: 500;'>{$telefono}</td>
-                        </tr>
-                        <tr>
-                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; color: #666;'><strong>Cantidad:</strong></td>
-                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; font-weight: 500;'>{$cantidad} boletos</td>
-                        </tr>
-                        <tr>
-                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; color: #666;'><strong>Números:</strong></td>
-                            <td style='padding: 12px 15px; border-bottom: 1px solid #eee; color: #2563eb; font-weight: bold;'>{$boletos}</td>
-                        </tr>
-                        <tr>
-                            <td style='padding: 12px 15px; color: #666;'><strong>Total Estimado:</strong></td>
-                            <td style='padding: 12px 15px; color: #166534; font-weight: bold;'>{$total}</td>
+                            <td width='70' valign='top' style='padding-right: 15px;'>
+                                <img src='{$img_src}' alt='Rifa' width='60' height='60' class='item-img'>
+                            </td>
+                            <td valign='middle'>
+                                <div class='item-title'>
+                                    {$tituloRifa}
+                                </div>
+                                <div class='item-meta'>
+                                    Cantidad: {$cantidad} boleto(s)
+                                </div>
+                            </td>
                         </tr>
                     </table>
-                    
-                    <div style='margin-top: 30px; text-align: center;'>
-                        <a href='" . (isset($_SERVER['HTTP_HOST']) ? 'https://' . $_SERVER['HTTP_HOST'] . '/admin' : '#') . "' style='display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;'>Gestionar Venta en Panel</a>
+
+                    <div class='data-row'>
+                        <span class='label' style='margin-bottom: 8px;'>Boletos Seleccionados</span>
+                        <div class='tickets-container'>
+                            {$boletos_html}
+                        </div>
+                    </div>
+
+                    <div class='total-box'>
+                        <table class='table-totals' cellpadding='0' cellspacing='0'>
+                            <tr>
+                                <td class='td-total-label'>Total a Pagar</td>
+                                <td class='td-total-value'>{$totalFormateado}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class='btn-wrapper'>
+                        <a href='https://rifas.rancholastrojes.com.mx/admin' class='btn-admin'>Gestionar en Panel</a>
                     </div>
                 </div>
-                
-                <div style='background-color: #f1f5f9; padding: 15px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;'>
-                    Este es un mensaje automático. Por favor no respondas a este correo.<br>
-                    &copy; " . date('Y') . " Rancho Las Trojes. Todos los derechos reservados.
+
+                <div class='footer'>
+                    Notificación interna de sistema.<br>
+                    © " . date('Y') . " Rancho Las Trojes
                 </div>
             </div>
         </body>
         </html>
         ";
 
-        // 5. Enviar
+        // 6. Enviar Correo
         $headers = "MIME-Version: 1.0" . "\r\n";
         $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
         $headers .= "From: " . $remitente . "\r\n";

@@ -97,7 +97,7 @@ class Rifa {
     // --- MÉTODOS DE GALERÍA ---
     
     public function guardarImagenGaleria($nombre_archivo) {
-        $query = "INSERT INTO " . $this->table_galeria . " (rifa_id, ruta_imagen) VALUES (:rifa_id, :ruta)";
+        $query = "INSERT INTO " . $this->table_galeria . " (rifa_id, ruta_archivo, tipo_archivo) VALUES (:rifa_id, :ruta, 'foto')";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':rifa_id', $this->id);
         $stmt->bindParam(':ruta', $nombre_archivo);
@@ -113,6 +113,103 @@ class Rifa {
     }
 
     // -----------------------------------
+    // --- NUEVOS MÉTODOS DE SUBIDA (UNIFICADOS) ---
+
+    public function subirPortada($archivo) {
+        // 1. LÓGICA DE LIMPIEZA ESTRICTA (Solo busca en assets/uploads/portadas/)
+        if ($this->id) {
+            $query = "SELECT imagen FROM " . $this->table . " WHERE id = :id LIMIT 1";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':id', $this->id);
+            $stmt->execute();
+            $registro = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($registro && !empty($registro['imagen'])) {
+                // $registro['imagen'] AHORA TRAE LA RUTA COMPLETA (assets/uploads/portadas/...)
+                // Solo necesitamos salir de admin/actions/ (../../) y concatenar
+                $ruta_a_borrar = __DIR__ . '/../../' . $registro['imagen'];
+
+                if (file_exists($ruta_a_borrar)) {
+                    unlink($ruta_a_borrar);
+                }
+            }
+        }
+
+        // procesarSubida ahora devuelve "assets/uploads/portadas/xyz.jpg"
+        $ruta_completa = $this->procesarSubida($archivo, 'portadas');
+        
+        if ($ruta_completa) {
+            $this->imagen = $ruta_completa;
+            return true;
+        }
+        return false;
+
+        // 2. PROCEDER CON LA SUBIDA A LA CARPETA OFICIAL
+        $nombre = $this->procesarSubida($archivo, 'portadas');
+        
+        if ($nombre) {
+            $this->imagen = $nombre;
+            return true;
+        }
+        return false;
+    }
+
+    public function subirGaleria($archivos) {
+        $conteo = 0;
+        // Validar si vienen múltiples archivos
+        if (isset($archivos['name']) && is_array($archivos['name'])) {
+            foreach ($archivos['name'] as $key => $name) {
+                if ($archivos['error'][$key] === UPLOAD_ERR_OK) {
+                    // Estructurar array individual para procesarSubida
+                    $archivo_individual = [
+                        'name' => $name,
+                        'tmp_name' => $archivos['tmp_name'][$key],
+                        'error' => $archivos['error'][$key]
+                    ];
+
+                    // Subir a la subcarpeta 'galeria'
+                    $nombre_generado = $this->procesarSubida($archivo_individual, 'galeria');
+                    
+                    if ($nombre_generado) {
+                        $this->guardarImagenGaleria($nombre_generado);
+                        $conteo++;
+                    }
+                }
+            }
+        }
+        return $conteo;
+    }
+
+    /**
+     * Genera ID único (uniqid) y mueve el archivo.
+     * Retorna el nombre del archivo generado o false.
+     */
+    private function procesarSubida($archivo, $subcarpeta) {
+        $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+        $uuid = uniqid();
+        $nuevo_nombre = $uuid . '.' . $extension;
+        
+        // Rutas base
+        // DB: Lo que guardamos en la base de datos (Ruta relativa web)
+        $ruta_db = "assets/uploads/" . ($subcarpeta ? $subcarpeta . "/" : "");
+        
+        // FÍSICA: Donde se mueve el archivo realmente (Relativa al script admin/actions/)
+        $base_dir_fisica = "../../assets/uploads/" . ($subcarpeta ? $subcarpeta . "/" : "");
+        
+        if (!is_dir($base_dir_fisica)) {
+            mkdir($base_dir_fisica, 0755, true);
+        }
+
+        $destino_final = $base_dir_fisica . $nuevo_nombre;
+
+        if (move_uploaded_file($archivo['tmp_name'], $destino_final)) {
+            // RETORNAMOS LA RUTA DB COMPLETA
+            return $ruta_db . $nuevo_nombre;
+        }
+        
+        return false;
+    }
+    // ---------------------------------------------
 
     public function eliminar() {
         // 1. Verificar ventas
@@ -124,26 +221,41 @@ class Rifa {
 
         if ($row['total'] > 0) return "TIENE_VENTAS"; 
 
+        // Cargar datos actuales para obtener las rutas de imágenes
         $this->obtenerUna(); 
 
-        // 2. Eliminar imagen de portada
-        if($this->imagen && file_exists(__DIR__ . '/../assets/uploads/' . $this->imagen)) {
-            unlink(__DIR__ . '/../assets/uploads/' . $this->imagen);
+        // 2. Eliminar imagen de portada (CORREGIDO)
+        // La BD ya trae "assets/uploads/portadas/...", así que solo concatenamos la raíz
+        if($this->imagen) {
+            $ruta_fisica = __DIR__ . '/../' . $this->imagen;
+            if(file_exists($ruta_fisica)) {
+                unlink($ruta_fisica);
+            }
         }
 
         // 3. Eliminar imágenes de galería (Físicamente)
         $galeria = $this->obtenerGaleria();
         foreach($galeria as $foto) {
-            $ruta = __DIR__ . '/../assets/uploads/galeria/' . $foto['ruta_imagen'];
-            if(file_exists($ruta)) {
-                unlink($ruta);
+            if (!empty($foto['ruta_archivo'])) {
+                // La BD ya trae "assets/uploads/galeria/...", solo concatenamos raíz
+                $ruta_fisica_gal = __DIR__ . '/../' . $foto['ruta_archivo'];
+                if(file_exists($ruta_fisica_gal)) {
+                    unlink($ruta_fisica_gal);
+                }
             }
         }
 
-        // 4. Eliminar registro (La BD eliminará las filas de galería por CASCADE)
+        // 4. Eliminar registros de galería explícitamente (Para asegurar limpieza en BD)
+        $queryGal = "DELETE FROM " . $this->table_galeria . " WHERE rifa_id = :id";
+        $stmtGal = $this->conn->prepare($queryGal);
+        $stmtGal->bindParam(':id', $this->id);
+        $stmtGal->execute();
+
+        // 5. Eliminar registro principal
         $query = "DELETE FROM " . $this->table . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $this->id);
+        
         return $stmt->execute();
     }
     
@@ -203,14 +315,12 @@ class Rifa {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // --- NUEVO MÉTODO AGREGADO ---
     public function obtenerActivas() {
         $query = "SELECT * FROM " . $this->table . " WHERE estado = 'activa' ORDER BY id DESC";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    // -----------------------------
 
     public function obtenerUna() {
         $query = "SELECT * FROM " . $this->table . " WHERE id = ? LIMIT 1";
